@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi Música</title>
+  <style>
+    /* ===== COLORES (variables): cámbialos aquí y cambia toda la app ===== */
+    :root {
+      --fondo: #121212;
+      --panel: #181818;
+      --tarjeta: #242424;
+      --texto: #ffffff;
+      --gris: #b3b3b3;
+      --verde: #1db954;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 220px 1fr;   /* barra lateral + contenido */
+      grid-template-rows: 1fr 90px;       /* contenido + barra del reproductor */
+    }
+
+    /* ----- Barra lateral (izquierda) ----- */
+    aside {
+      background: #000;
+      padding: 20px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    aside h1 { font-size: 20px; margin: 0 8px 16px; }
+    aside h1 span { color: var(--verde); }
+    .menu {
+      background: none; border: none; color: var(--gris);
+      text-align: left; padding: 10px 8px; border-radius: 6px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .menu:hover, .menu.activo { color: var(--texto); background: var(--tarjeta); }
+    .sonandoAhora { margin-top: auto; display: none; }
+    .sonandoAhora.visible { display: block; }
+    .sonandoAhora p { color: var(--gris); font-size: 12px; font-weight: 700; margin: 0 8px 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px; text-align: left; }
+    .linkClave:hover { color: var(--texto); }
+    /* Tarjeta de bienvenida (para pegar la clave la primera vez) */
+    .bienvenida { background: var(--tarjeta); border-radius: 8px; padding: 20px; max-width: 520px; line-height: 1.6; }
+    .bienvenida h3 { margin-bottom: 8px; }
+    .bienvenida ol { margin: 8px 0 12px 20px; color: var(--gris); }
+    .bienvenida a { color: var(--verde); }
+    .bienvenida .fila { display: flex; gap: 8px; }
+    .bienvenida input { flex: 1; padding: 10px 14px; border-radius: 999px; border: none; background: #3a3a3a; color: var(--texto); }
+
+    /* ----- Contenido principal ----- */
+    main { overflow-y: auto; padding: 20px 24px; background: linear-gradient(#1e1e1e, var(--fondo) 300px); }
+    .buscador { margin-bottom: 20px; max-width: 480px; }
+    .buscador input {
+      width: 100%; padding: 12px 16px 12px 42px;
+      background: var(--tarjeta) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%23b3b3b3' stroke-width='2.5'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='M13 13l4 4'/%3E%3C/svg%3E") no-repeat 14px center; border-radius: 999px; border: none;
+      color: var(--texto); font-size: 14px;
+    }
+    .buscador input:focus { outline: 2px solid var(--texto); }
+    .boton {
+      background: var(--verde); color: #000; border: none; border-radius: 999px;
+      padding: 10px 18px; font-weight: 700; cursor: pointer;
+    }
+    .boton.gris { background: var(--tarjeta); color: var(--texto); }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    .aviso { color: var(--gris); padding: 20px 0; line-height: 1.6; }
+
+    /* ----- Lista de canciones ----- */
+    .cancion {
+      display: grid; grid-template-columns: 20px 40px 1fr auto; gap: 12px;
+      align-items: center; padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    }
+    .cancion:hover { background: var(--tarjeta); }
+    .cancion .num { color: var(--gris); text-align: right; font-size: 13px; }
+    .cancion:hover .num { color: var(--texto); }
+    .cancion img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+    .cancion .titulo { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cancion .canal { color: var(--gris); font-size: 12px; }
+    .cancion.sonando .titulo, .cancion.sonando .num { color: var(--verde); }
+    .corazon { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gris); padding: 4px 8px; }
+    .corazon.lleno { color: var(--verde); }
+
+    /* ----- Barra del reproductor (abajo) ----- */
+    footer {
+      grid-column: 1 / 3; background: var(--panel); border-top: 1px solid #282828;
+      display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; padding: 0 16px; gap: 16px;
+    }
+    .info { display: flex; gap: 10px; align-items: center; min-width: 0; }
+    .info img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; background: var(--tarjeta); }
+    .info div { min-width: 0; }
+    .info .titulo { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .info .canal { color: var(--gris); font-size: 12px; }
+    .controles { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .controles .botones { display: flex; gap: 16px; align-items: center; }
+    .controles button { background: none; border: none; color: var(--texto); font-size: 18px; cursor: pointer; }
+    #btnPlay { background: var(--texto); color: #000; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; }
+    .progreso { display: flex; gap: 8px; align-items: center; width: 100%; font-size: 11px; color: var(--gris); }
+    input[type=range] { flex: 1; accent-color: var(--verde); }
+    .volumen { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+    .volumen input { max-width: 120px; }
+
+    /* El vídeo de YouTube existe pero lo hacemos pequeñito en una esquina
+       (YouTube exige que el reproductor sea visible, no lo escondemos del todo) */
+    #video { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; }
+
+    /* Móvil: la barra lateral pasa arriba */
+    @media (max-width: 700px) {
+      body { grid-template-columns: 1fr; grid-template-rows: auto 1fr 136px; }
+      aside { flex-direction: row; padding: 8px 16px; align-items: center; }
+      aside h1 { display: none; } .linkClave { margin-left: auto; }
+      .sonandoAhora { position: fixed; right: 12px; bottom: 146px; width: 160px; margin: 0; }
+      .sonandoAhora p { display: none; }
+      main { padding: 16px; }
+      footer { grid-column: 1; grid-template-columns: 1fr; gap: 4px; padding: 8px 16px; }
+      .volumen { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== BARRA LATERAL ===== -->
+  <aside>
+    <h1>🎵 Mi <span>Música</span></h1>
+    <button class="menu activo" data-vista="buscar">🔍 Buscar</button>
+    <button class="menu" data-vista="favoritos">💚 Favoritos</button>
+    <!-- Aquí aparece el vídeo cuando suena algo (YouTube exige que se vea) -->
+    <div class="sonandoAhora" id="sonandoAhora">
+      <p>Sonando ahora</p>
+      <div id="video"><div id="reproductorYT"></div></div>
+    </div>
+    <button class="linkClave" id="btnClave">⚙ Clave de YouTube</button>
+  </aside>
+
+  <!-- ===== CONTENIDO ===== -->
+  <main>
+    <form class="buscador" id="formBuscar">
+      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off">
+    </form>
+    <h2 id="tituloLista">Buscar</h2>
+    <div id="lista"></div>
+  </main>
+
+  <!-- ===== REPRODUCTOR ===== -->
+  <footer>
+    <div class="info">
+      <img id="infoImg" alt="">
+      <div><div class="titulo" id="infoTitulo">Nada sonando</div><div class="canal" id="infoCanal"></div></div>
+    </div>
+    <div class="controles">
+      <div class="botones">
+        <button id="btnAnterior" title="Anterior">⏮</button>
+        <button id="btnPlay" title="Play / Pausa">▶</button>
+        <button id="btnSiguiente" title="Siguiente">⏭</button>
+      </div>
+      <div class="progreso">
+        <span id="tiempoActual">0:00</span>
+        <input type="range" id="barraProgreso" min="0" max="100" value="0">
+        <span id="tiempoTotal">0:00</span>
+      </div>
+    </div>
+    <div class="volumen">🔊 <input type="range" id="barraVolumen" min="0" max="100" value="80"></div>
+  </footer>
+
+  <!-- Script oficial de YouTube: nos da el reproductor -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    // =====================================================================
+    // 1) DATOS: lo que la app "recuerda"
+    // =====================================================================
+    // localStorage = una pequeña libreta del navegador que no se borra al cerrar.
+    function leer(nombre, porDefecto) {
+      try { return JSON.parse(localStorage.getItem(nombre)) ?? porDefecto; }
+      catch { return porDefecto; }
+    }
+    function guardar(nombre, valor) {
+      try { localStorage.setItem(nombre, JSON.stringify(valor)); } catch {}
+    }
+
+    let favoritos = leer("favoritos", []);   // lista de canciones favoritas
+    let cola = [];                           // canciones que se están mostrando
+    let posicion = -1;                       // cuál de la cola está sonando
+    let reproductor = null;                  // el reproductor de YouTube
+
+    // =====================================================================
+    // 2) LA CLAVE DE YOUTUBE (para poder buscar)
+    // =====================================================================
+    // Muestra una tarjeta para pegar la clave (solo hace falta una vez)
+    function mostrarBienvenida() {
+      cambiarVista("buscar", false);
+      document.getElementById("tituloLista").textContent = "¡Hola! 👋";
+      document.getElementById("lista").innerHTML = `
+        <div class="bienvenida">
+          <h3>Un paso antes de buscar</h3>
+          Para buscar canciones necesitas una clave gratis de YouTube:
+          <ol>
+            <li>Abre <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank">esta página</a> y pulsa <b>Habilitar</b>.</li>
+            <li>Ve a <b>Credenciales → Crear credenciales → Clave de API</b>.</li>
+            <li>Cópiala y pégala aquí abajo.</li>
+          </ol>
+          <div class="fila">
+            <input id="campoClave" placeholder="Pega tu clave aquí">
+            <button class="boton" id="guardarClave">Guardar</button>
+          </div>
+          <p class="aviso" style="padding:8px 0 0">Mientras tanto, puedes pegar un enlace de YouTube en el buscador.</p>
+        </div>`;
+      document.getElementById("campoClave").value = leer("claveYT", "");
+      document.getElementById("guardarClave").onclick = () => {
+        guardar("claveYT", document.getElementById("campoClave").value.trim());
+        mostrarInicio();
+      };
+    }
+    document.getElementById("btnClave").onclick = mostrarBienvenida;
+
+    // Pantalla de inicio: si no hay clave, la pedimos; si hay, invitamos a buscar
+    function mostrarInicio() {
+      if (!leer("claveYT", "")) return mostrarBienvenida();
+      document.getElementById("tituloLista").textContent = "Buscar";
+      document.getElementById("lista").innerHTML = '<p class="aviso">Escribe una canción o artista y pulsa Enter. 🎧</p>';
+      document.getElementById("campoBuscar").focus();
+    }
+
+    // =====================================================================
+    // 3) BUSCAR canciones en YouTube
+    // =====================================================================
+    // Saca el ID de un enlace como https://youtu.be/abc o ...watch?v=abc
+    function idDeEnlace(texto) {
+      const m = texto.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);
+      return m ? m[1] : null;
+    }
+
+    async function buscar(texto) {
+      const lista = document.getElementById("lista");
+
+      // Si pegaste un enlace, lo reproducimos directamente (no hace falta clave)
+      const id = idDeEnlace(texto);
+      if (id) {
+        cola = [{ id, titulo: "Vídeo de YouTube", canal: "", img: `https://i.ytimg.com/vi/${id}/mqdefault.jpg` }];
+        pintarLista("Enlace", cola);
+        tocar(0);
+        return;
+      }
+
+      const clave = leer("claveYT", "");
+      if (!clave) return mostrarBienvenida();
+
+      lista.innerHTML = '<p class="aviso">Buscando…</p>';
+      // fetch = "ve a esta dirección de internet y tráeme la respuesta"
+      const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
+                  "&videoCategoryId=10&maxResults=20&q=" + encodeURIComponent(texto) + "&key=" + clave;
+      try {
+        const respuesta = await fetch(url);
+        const datos = await respuesta.json();
+        if (datos.error) throw new Error(datos.error.message);
+        // Convertimos la respuesta de YouTube en nuestras "canciones"
+        cola = datos.items.map(v => ({
+          id: v.id.videoId,
+          titulo: decodificar(v.snippet.title),
+          canal: decodificar(v.snippet.channelTitle),
+          img: v.snippet.thumbnails.medium.url
+        }));
+        pintarLista('Resultados para "' + texto + '"', cola);
+      } catch (e) {
+        lista.innerHTML = '<p class="aviso">Error al buscar: ' + e.message + '</p>';
+      }
+    }
+
+    // YouTube manda textos como "Rock &amp; Roll"; esto lo deja en "Rock & Roll"
+    function decodificar(t) {
+      const el = document.createElement("textarea"); el.innerHTML = t; return el.value;
+    }
+
+    document.getElementById("formBuscar").onsubmit = (e) => {
+      e.preventDefault();   // evita que la página se recargue
+      const texto = document.getElementById("campoBuscar").value.trim();
+      if (texto) { cambiarVista("buscar", false); buscar(texto); }
+    };
+
+    // =====================================================================
+    // 4) PINTAR la lista de canciones en la pantalla
+    // =====================================================================
+    function esFavorita(id) { return favoritos.some(f => f.id === id); }
+
+    function pintarLista(titulo, canciones) {
+      document.getElementById("tituloLista").textContent = titulo;
+      const lista = document.getElementById("lista");
+      lista.innerHTML = "";
+      if (canciones.length === 0) {
+        lista.innerHTML = '<p class="aviso">No hay canciones aquí todavía. Pulsa el 🤍 de una canción para guardarla.</p>';
+        return;
+      }
+      canciones.forEach((c, i) => {
+        const fila = document.createElement("div");
+        fila.className = "cancion" + (cola[posicion]?.id === c.id ? " sonando" : "");
+        fila.innerHTML = `
+          <span class="num">${i + 1}</span>
+          <img src="${c.img}" alt="">
+          <div style="min-width:0"><div class="titulo"></div><div class="canal"></div></div>
+          <button class="corazon ${esFavorita(c.id) ? "lleno" : ""}" title="Favorito">${esFavorita(c.id) ? "💚" : "🤍"}</button>`;
+        // textContent (y no innerHTML) para que un título raro no rompa la página
+        fila.querySelector(".titulo").textContent = c.titulo;
+        fila.querySelector(".canal").textContent = c.canal;
+        fila.onclick = () => { cola = canciones; tocar(i); };
+        fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); alternarFavorito(c); };
+        lista.appendChild(fila);
+      });
+    }
+
+    // =====================================================================
+    // 5) FAVORITOS
+    // =====================================================================
+    function alternarFavorito(c) {
+      if (esFavorita(c.id)) favoritos = favoritos.filter(f => f.id !== c.id);
+      else favoritos.push(c);
+      guardar("favoritos", favoritos);
+      // Volvemos a pintar la vista actual para que el corazón cambie
+      if (vistaActual === "favoritos") pintarLista("Tus favoritos", favoritos);
+      else pintarLista(document.getElementById("tituloLista").textContent, cola);
+    }
+
+    let vistaActual = "buscar";
+    function cambiarVista(vista, pintar = true) {
+      vistaActual = vista;
+      document.querySelectorAll(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === vista));
+      if (!pintar) return;
+      if (vista === "favoritos") pintarLista("Tus favoritos", favoritos);
+      else mostrarInicio();
+    }
+    document.querySelectorAll(".menu").forEach(b => b.onclick = () => cambiarVista(b.dataset.vista));
+
+    // =====================================================================
+    // 6) EL REPRODUCTOR (YouTube IFrame API)
+    // =====================================================================
+    // YouTube llama a esta función sola cuando su script ha cargado
+    function onYouTubeIframeAPIReady() {
+      reproductor = new YT.Player("reproductorYT", {
+        width: "100%", height: "100%",
+        playerVars: { playsinline: 1 },
+        events: {
+          onReady: () => reproductor.setVolume(80),
+          // Cuando una canción termina (estado 0), pasamos a la siguiente
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) siguiente();
+            document.getElementById("btnPlay").textContent = e.data === YT.PlayerState.PLAYING ? "⏸" : "▶";
+          }
+        }
+      });
+    }
+
+    function tocar(i) {
+      if (!cola[i]) return;
+      posicion = i;
+      const c = cola[i];
+      if (reproductor?.loadVideoById) reproductor.loadVideoById(c.id);
+      document.getElementById("infoImg").src = c.img;
+      document.getElementById("infoTitulo").textContent = c.titulo;
+      document.getElementById("infoCanal").textContent = c.canal;
+      document.title = "▶ " + c.titulo;
+      document.getElementById("sonandoAhora").classList.add("visible");
+      // Marcamos en verde la que suena
+      document.querySelectorAll(".cancion").forEach((f, j) => f.classList.toggle("sonando", j === i && document.getElementById("lista").children.length === cola.length));
+    }
+    function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
+    function anterior()  { if (posicion > 0) tocar(posicion - 1); }
+
+    document.getElementById("btnSiguiente").onclick = siguiente;
+    document.getElementById("btnAnterior").onclick = anterior;
+    document.getElementById("btnPlay").onclick = () => {
+      if (!reproductor || posicion < 0) return;
+      if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
+      else reproductor.playVideo();
+    };
+    document.getElementById("barraVolumen").oninput = (e) => reproductor?.setVolume(e.target.value);
+    document.getElementById("barraProgreso").oninput = (e) => {
+      if (!reproductor) return;
+      reproductor.seekTo(reproductor.getDuration() * e.target.value / 100, true);
+    };
+
+    // Cada medio segundo actualizamos la barra de tiempo
+    function formato(seg) { seg = Math.floor(seg || 0); return Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"); }
+    setInterval(() => {
+      if (!reproductor?.getDuration) return;
+      const actual = reproductor.getCurrentTime(), total = reproductor.getDuration();
+      document.getElementById("tiempoActual").textContent = formato(actual);
+      document.getElementById("tiempoTotal").textContent = formato(total);
+      if (total) document.getElementById("barraProgreso").value = actual / total * 100;
+    }, 500);
+
+    mostrarInicio();   // lo primero que se ve al abrir la app
+
+    // Atajo: barra espaciadora = play/pausa (si no estás escribiendo)
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); document.getElementById("btnPlay").click(); }
+    });
+  </script>
+</body>
+</html>

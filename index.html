@@ -306,13 +306,31 @@
 
     /* ===================== PANTALLA "REPRODUCIENDO" (se abre al tocar el mini) ===================== */
     #pantalla {
-      position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; isolation: isolate;
-      padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(20px + env(safe-area-inset-bottom, 0px));
-      background: #121212;
+      position: fixed; inset: 0; z-index: 30; isolation: isolate; background: #121212;
       transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1);
-      /* Que NADA se corra al deslizar el dedo: no se mueve ni hacia abajo ni hacia los lados */
-      overflow: hidden; overflow: clip; overscroll-behavior: none; touch-action: none;
+      overflow: hidden; overflow: clip;   /* recorta lo que sobra del fondo: nada se corre */
     }
+    /* Lo que se desliza (solo hacia arriba y abajo, nunca a los lados), como en Spotify:
+       primero el reproductor y, más abajo, la letra */
+    .desplazable {
+      position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y;
+      display: flex; flex-direction: column; align-items: center; gap: 24px; scrollbar-width: none;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+    .primeraParte { width: 100%; max-width: 440px; flex: none; display: flex; flex-direction: column;
+      min-height: calc(100dvh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+    /* Si hay letra, el reproductor se encoge un poquito para que asome la tarjeta de la letra */
+    #pantalla.conLetra .primeraParte { min-height: calc(100dvh - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+    /* ----- Tarjeta de la letra ----- */
+    .tarjetaLetra { width: 100%; max-width: 440px; flex: none; border-radius: 14px; padding: 18px 18px 16px; background: var(--colorLetra, #4b3a33); }
+    .tarjetaLetra h3 { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .lineas { position: relative; height: 290px; overflow: hidden; }
+    .tarjetaLetra.completa .lineas { height: auto; }
+    .lineas p { font-size: 21px; font-weight: 800; line-height: 1.35; margin-bottom: 10px; color: #000000a6; transition: color .3s; }
+    .lineas p.cantada, .lineas p.ahora { color: #fff; }
+    .lineas.sinTiempos p { color: #fff; }   /* letra sin tiempos: toda en blanco */
+    .tarjetaLetra .boton { margin-top: 14px; background: #fff; color: #000; }
+    .creditoLetra { font-size: 11px; color: #ffffff99; margin-top: 10px; }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
     /* Como en Spotify: la portada ocupa TODO el fondo de la pantalla */
@@ -323,12 +341,12 @@
     /* Cuando el reproductor ya está detrás, quitamos el fondo propio para que se vea */
     #pantalla.videoDetras { background: transparent; }
     #pantalla.videoDetras #fondoPortada { visibility: hidden; }
-    .barraArriba { width: 100%; max-width: 440px; display: flex; align-items: center; justify-content: space-between; }
+    .barraArriba { width: 100%; display: flex; align-items: center; justify-content: space-between; }
     .barraArriba small { display: block; text-align: center; font-size: 12px; color: #ffffffd9; }
     .barraArriba b { display: block; text-align: center; font-size: 14px; font-weight: 800; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .barraArriba .iconoBoton { color: var(--texto); }
     .barraArriba .iconoBoton .ic { width: 26px; height: 26px; }
-    .grande { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; flex: 1; justify-content: flex-end; }
+    .grande { width: 100%; display: flex; flex-direction: column; gap: 16px; flex: 1; justify-content: flex-end; }
     /* El reproductor de YouTube (con la portada encima).
        TRUCO DE VELOCIDAD: vive SIEMPRE dentro de la pantalla visible, escondido DEBAJO
        del contenido. Si estuviera fuera de la pantalla, el móvil lo pondría "a dormir". */
@@ -540,6 +558,8 @@
   <!-- ===== PANTALLA "REPRODUCIENDO" (grande) ===== -->
   <section id="pantalla" aria-label="Reproduciendo">
     <img id="fondoPortada" alt="">
+    <div class="desplazable" id="desplazable">
+    <div class="primeraParte">
     <div class="barraArriba">
       <button class="iconoBoton" id="cerrarPantalla" title="Cerrar"><svg class="ic"><use href="#i-abajo"/></svg></button>
       <div><small>Reproduciendo desde</small><b id="desde">Mi Música</b></div>
@@ -565,6 +585,15 @@
       <div class="barraAbajo">
         <button class="iconoBoton" id="btnCola" title="Cola"><svg class="ic"><use href="#i-cola"/></svg></button>
       </div>
+    </div>
+    </div>
+    <!-- La letra (sale más abajo, deslizando hacia arriba) -->
+    <div class="tarjetaLetra" id="tarjetaLetra" hidden>
+      <h3>Vista previa de la letra</h3>
+      <div class="lineas" id="lineas"></div>
+      <button class="boton" id="btnLetraCompleta">Mostrar letra</button>
+      <div class="creditoLetra">Letras de LRCLIB</div>
+    </div>
     </div>
   </section>
 
@@ -897,7 +926,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "27 · 31 oct";
+    const VERSION = "28 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1344,6 +1373,7 @@
       ponerPortadaGrande(c.id);
       document.title = c.titulo + " · Mi Música";
       actualizarNotificacion(c);
+      cargarLetra(c);
       apuntarEnHistorial(c);
       todos(".btnPlay").forEach(b => b.classList.add("cargando"));
       ponerProgreso(0, 0);
@@ -1390,6 +1420,7 @@
     function abrirPantalla() {
       if ($("pantalla").classList.contains("abierta")) return;
       $("pantalla").classList.add("abierta");
+      $("desplazable").scrollTop = 0;   // siempre empieza arriba, en el reproductor
       history.pushState({ vista: vistaActual, capa: "pantalla" }, "");
     }
     function cerrarPantalla() {
@@ -1470,11 +1501,110 @@
       if (arrastrando) return;
       todos(".barraTiempo").forEach(b => { b.value = pct * 10; b.style.setProperty("--pct", pct + "%"); });
     }
-    // Cada medio segundo actualizamos el tiempo
+    // Cada medio segundo actualizamos el tiempo (y la línea de la letra que toca)
     setInterval(() => {
       if (!reproductor?.getDuration || posicion < 0) return;
       ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
+      seguirLetra(reproductor.getCurrentTime());
     }, 500);
+
+    // =====================================================================
+    // LA LETRA DE LA CANCIÓN (de LRCLIB, una página gratis de letras)
+    // =====================================================================
+    // Muchas letras vienen "con tiempos", así:  [00:12.50] Tratando de olvidarte
+    // Eso nos dice en qué segundo se canta cada frase, para iluminarla como Spotify.
+    let letra = [];            // [{ t: segundos, texto }]
+    let letraConTiempos = false;
+    const memoriaLetras = {};  // para no pedir dos veces la misma letra
+
+    // Limpia el título de YouTube: quita "(Video Oficial)", "[Lyrics]", "ft. Fulano"...
+    function limpiarTitulo(c) {
+      let t = c.titulo.replace(/\(.*?\)|\[.*?\]/g, " ")
+        .replace(/\b(official|oficial|video|vídeo|videoclip|lyrics?|letra|audio|visualizer|hd|4k)\b/gi, " ")
+        .replace(/\b(ft|feat)\b\.?.*$/i, " ").replace(/[|"“”]/g, " ").replace(/\s+/g, " ").trim();
+      // Si el título no trae el artista ("Artista - Canción"), lo sacamos del canal
+      if (!t.includes(" - ")) t += " " + c.canal.replace(/ - Topic|VEVO|Oficial|Official|Music/gi, "").trim();
+      return t;
+    }
+
+    async function cargarLetra(c) {
+      $("tarjetaLetra").hidden = true;
+      $("pantalla").classList.remove("conLetra");
+      letra = [];
+      const id = c.id;
+      try {
+        if (!memoriaLetras[id]) {
+          const r = await fetch("https://lrclib.net/api/search?q=" + encodeURIComponent(limpiarTitulo(c)));
+          const resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
+          // Preferimos una letra con tiempos y que dure lo mismo que el vídeo
+          const dura = reproductor?.getDuration?.() || 0;
+          const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
+          memoriaLetras[id] = resultados.sort((a, b) => puntos(b) - puntos(a))[0] || "nada";
+        }
+        if (cola[posicion]?.id !== id || memoriaLetras[id] === "nada") return;   // ya cambiaste de canción
+        pintarLetra(memoriaLetras[id]);
+      } catch { /* sin internet o sin letra: simplemente no la mostramos */ }
+    }
+
+    function pintarLetra(x) {
+      letraConTiempos = !!x.syncedLyrics;
+      if (letraConTiempos) {
+        letra = x.syncedLyrics.split("\n").map(l => {
+          const m = l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
+          return m && { t: Number(m[1]) * 60 + Number(m[2]), texto: m[3] || "♪" };
+        }).filter(Boolean);
+      } else {
+        letra = x.plainLyrics.split("\n").filter(l => l.trim()).map(texto => ({ t: 0, texto }));
+      }
+      const caja = $("lineas");
+      caja.innerHTML = "";
+      caja.classList.toggle("sinTiempos", !letraConTiempos);
+      letra.forEach(l => { const p = document.createElement("p"); p.textContent = l.texto; caja.appendChild(p); });
+      caja.scrollTop = 0;
+      $("tarjetaLetra").classList.remove("completa");
+      $("btnLetraCompleta").textContent = "Mostrar letra";
+      $("tarjetaLetra").hidden = false;
+      $("pantalla").classList.add("conLetra");
+      colorDeLetra();
+    }
+
+    // Ilumina la frase que se está cantando y sube la letra para que se vea
+    function seguirLetra(segundo) {
+      if (!letraConTiempos || !letra.length || !$("pantalla").classList.contains("abierta")) return;
+      let ahora = -1;
+      letra.forEach((l, k) => { if (l.t <= segundo + 0.3) ahora = k; });
+      const filas = $("lineas").children;
+      [...filas].forEach((p, k) => { p.classList.toggle("cantada", k < ahora); p.classList.toggle("ahora", k === ahora); });
+      if (ahora >= 0 && !$("tarjetaLetra").classList.contains("completa"))
+        $("lineas").scrollTo({ top: Math.max(0, filas[ahora].offsetTop - 70), behavior: "smooth" });
+    }
+
+    $("btnLetraCompleta").onclick = () => {
+      const completa = $("tarjetaLetra").classList.toggle("completa");
+      $("btnLetraCompleta").textContent = completa ? "Mostrar menos" : "Mostrar letra";
+      if (!completa) $("tarjetaLetra").scrollIntoView({ block: "start", behavior: "smooth" });
+    };
+
+    // El color de la tarjeta sale de la portada (como hace Spotify)
+    function colorDeLetra() {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const lienzo = document.createElement("canvas");
+          lienzo.width = lienzo.height = 8;
+          const ctx = lienzo.getContext("2d");
+          ctx.drawImage(img, 0, 0, 8, 8);
+          const d = ctx.getImageData(0, 0, 8, 8).data;
+          let [r, g, b] = [0, 0, 0];
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+          // Lo oscurecemos un poco para que las letras blancas se lean
+          const n = d.length / 4, f = 0.75;
+          $("pantalla").style.setProperty("--colorLetra", `rgb(${r / n * f | 0}, ${g / n * f | 0}, ${b / n * f | 0})`);
+        } catch { /* si la imagen no deja leer sus colores, usamos el color de siempre */ }
+      };
+      img.src = $("portada").src;
+    }
 
     // =====================================================================
     // 8) CONTROLES EN LA NOTIFICACIÓN DEL MÓVIL (⏮ ⏯ ⏭)

@@ -330,16 +330,14 @@
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; height: var(--alturaMenu);
         flex-direction: row; justify-content: space-around; padding: 8px 8px calc(6px + env(safe-area-inset-bottom, 0px));
         border-radius: 0; gap: 0;
-        /* Totalmente transparente: se ve todo lo que hay detrás, como en Spotify.
-           La sombrita en iconos y letras hace que se lean sobre cualquier portada. */
-        background: transparent;
-      }
-      nav .menu { text-shadow: 0 1px 4px #000, 0 0 10px #000c; }
-      nav .menu .ic { filter: drop-shadow(0 1px 3px #000) drop-shadow(0 0 6px #000c);
+        /* Como Spotify: arriba transparente y abajo se oscurece poco a poco.
+           Así se ve lo de detrás y los iconos blancos se leen bien. */
+        background: linear-gradient(180deg, #00000000 0%, #0000008c 40%, #000000e6 100%);
       }
       .marca, .linkClave { display: none; }
-      .menu { flex-direction: column; gap: 4px; padding: 4px 12px; font-size: 11px; font-weight: 600; flex: 1; align-items: center; }
-      .menu .ic { width: 26px; height: 26px; }
+      .menu { flex-direction: column; gap: 4px; padding: 6px 12px 0; font-size: 12px; font-weight: 500; flex: 1; align-items: center; color: #b3b3b3; }
+      .menu.activo { color: #fff; font-weight: 700; }
+      .menu .ic { width: 28px; height: 28px; }
       .menu:active { transform: scale(.9); }
       /* Mini reproductor pequeñito, como el de Spotify */
       #mini {
@@ -742,7 +740,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "16 · 31 oct";
+    const VERSION = "17 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";

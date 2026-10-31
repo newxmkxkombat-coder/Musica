@@ -926,7 +926,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "29 · 31 oct";
+    const VERSION = "30 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -947,8 +947,10 @@
       // OJO: guardamos una COPIA del historial tal como se ve ahora. El historial real
       // cambia de orden cada vez que suena algo, y entonces el número i apuntaría a otra canción.
       const recientes = historial.slice();
-      recientes.slice(0, 8 - accesos.children.length).forEach((c, i) =>
-        cuadrito(`<img class="tapa" src="${c.img}" alt="">`, c.titulo, () => reproducirLista(recientes, i, "Escuchado recientemente")));
+      recientes.slice(0, 8 - accesos.children.length).forEach((c, i) => {
+        cuadrito(`<img class="tapa" src="${c.img}" alt="">`, c.titulo, () => reproducirLista(recientes, i, "Escuchado recientemente"));
+        accesos.lastChild.onpointerdown = () => precargar(c.id);   // empieza a cargar al apoyar el dedo
+      });
 
       // Escuchado recientemente (suena directo, no gasta tu clave porque ya sabemos su id)
       if (historial.length) {
@@ -1275,7 +1277,7 @@
       const E = YT.PlayerState;
       if (n === activo) {
         if (estado === E.ENDED) siguiente();
-        if (estado === E.PLAYING) { precargarVecinas(); silencio.play().catch(() => {}); }
+        if (estado === E.PLAYING) { cargarExtras(); precargarVecinas(); silencio.play().catch(() => {}); }
         if (estado === E.PAUSED) silencio.pause();
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
@@ -1376,7 +1378,10 @@
       ponerPortadaGrande(c.id);
       document.title = c.titulo + " · Mi Música";
       actualizarNotificacion(c);
-      cargarLetra(c);
+      // La letra y la portada en alta calidad esperan a que la canción YA suene:
+      // así no le "roban" internet a la música justo cuando está arrancando.
+      extrasPendientes = c;
+      $("tarjetaLetra").hidden = true; $("pantalla").classList.remove("conLetra");
       apuntarEnHistorial(c);
       todos(".btnPlay").forEach(b => b.classList.add("cargando"));
       ponerProgreso(0, 0);
@@ -1385,8 +1390,17 @@
 
     // Portada para el fondo: probamos la de alta calidad (1280px); si el vídeo no la tiene,
     // YouTube devuelve una imagen gris pequeñita, y entonces usamos la normal.
-    function ponerPortadaGrande(id) {
+    let extrasPendientes = null;
+    function cargarExtras() {
+      if (!extrasPendientes || extrasPendientes !== cola[posicion]) return;
+      const c = extrasPendientes;
+      extrasPendientes = null;
+      ponerPortadaGrande(c.id, true);
+      cargarLetra(c);
+    }
+    function ponerPortadaGrande(id, alta = false) {
       const normal = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+      if (!alta) return ponerFondo(normal);
       const prueba = new Image();
       prueba.onload = () => { if (cola[posicion]?.id === id) ponerFondo(prueba.naturalWidth > 200 ? prueba.src : normal); };
       prueba.onerror = () => { if (cola[posicion]?.id === id) ponerFondo(normal); };

@@ -969,6 +969,7 @@
       $("hojaCancion").textContent = c.titulo;
       pintarHoja();
       $("fondoHoja").hidden = false;
+      history.pushState({ vista: vistaActual, capa: "hoja" }, "");
     }
     function pintarHoja() {
       const caja = $("hojaCarpetas");
@@ -995,13 +996,18 @@
       nueva.canciones.push(cancionHoja);   // la canción entra directo en la carpeta nueva
       guardarCarpetas(); $("hojaNombre").value = ""; pintarHoja();
     };
-    function cerrarHoja() { $("fondoHoja").hidden = true; repintar(); }
+    function cerrarHoja() {
+      if (history.state?.capa === "hoja") return history.back();   // el "atrás" la cierra
+      $("fondoHoja").hidden = true; repintar();
+    }
     $("hojaListo").onclick = cerrarHoja;
     $("fondoHoja").onclick = (e) => { if (e.target.id === "fondoHoja") cerrarHoja(); };
 
     // ----- Cambiar de pestaña (Inicio / Buscar / Tu biblioteca) -----
     let vistaActual = "inicio";
-    function cambiarVista(vista, pintar = true) {
+    // desdeAtras = true cuando venimos del botón "atrás" del móvil (no apuntamos otra vez)
+    function cambiarVista(vista, pintar = true, desdeAtras = false) {
+      if (pintar && !desdeAtras && vista !== vistaActual) history.pushState({ vista }, "");
       vistaActual = vista;
       const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
       todos(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
@@ -1178,9 +1184,32 @@
     todos(".corazonActual").forEach(b => b.onclick = (e) => { e.stopPropagation(); if (posicion >= 0) abrirHoja(cola[posicion]); });
 
     // Abrir y cerrar la pantalla grande
-    $("abrirPantalla").onclick = () => $("pantalla").classList.add("abierta");
-    $("mini").onclick = (e) => { if (window.innerWidth <= 700) $("pantalla").classList.add("abierta"); };
-    $("cerrarPantalla").onclick = () => $("pantalla").classList.remove("abierta");
+    function abrirPantalla() {
+      if ($("pantalla").classList.contains("abierta")) return;
+      $("pantalla").classList.add("abierta");
+      history.pushState({ vista: vistaActual, capa: "pantalla" }, "");
+    }
+    function cerrarPantalla() {
+      if (history.state?.capa === "pantalla") return history.back();   // el "atrás" la cierra
+      $("pantalla").classList.remove("abierta");
+    }
+    $("abrirPantalla").onclick = (e) => { e.stopPropagation(); abrirPantalla(); };
+    $("mini").onclick = () => { if (window.innerWidth <= 700) abrirPantalla(); };
+    $("cerrarPantalla").onclick = cerrarPantalla;
+
+    // =====================================================================
+    // BOTÓN "ATRÁS" DEL MÓVIL
+    // =====================================================================
+    // Cada vez que cambias de pantalla, la apuntamos en el "historial" del navegador
+    // (history.pushState). Cuando tocas "atrás", el navegador nos avisa con el
+    // evento "popstate" y volvemos a la pantalla anterior en vez de salir de la app.
+    window.addEventListener("popstate", (e) => {
+      const estado = e.state || { vista: "inicio" };
+      // Primero cerramos lo que esté abierto encima (pantalla grande u hoja)
+      if (estado.capa !== "pantalla") $("pantalla").classList.remove("abierta");
+      if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
+      if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
+    });
 
     // Volumen
     const barraVolumen = $("barraVolumen");
@@ -1290,7 +1319,8 @@
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
     ponerIconoPlay(false);
-    cambiarVista("inicio");   // lo primero que se ve al abrir la app
+    history.replaceState({ vista: "inicio" }, "");   // primera página del historial
+    cambiarVista("inicio", true, true);   // lo primero que se ve al abrir la app
 
     // Atajo: barra espaciadora = play/pausa (si no estás escribiendo)
     document.addEventListener("keydown", (e) => {

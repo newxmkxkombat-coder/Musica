@@ -191,7 +191,17 @@
     .sug .titulo { font-size: 17px; font-weight: 500; }
     /* Búsquedas recientes */
     .tituloRecientes { font-size: 18px; font-weight: 800; padding: 6px 8px 8px; }
-    .sug .quitarReciente { color: var(--gris); width: 36px; height: 36px; }
+    .sug .quitarReciente { color: var(--gris); width: 36px; height: 36px; flex: none; }
+    .sug.reciente > div { flex: 1; min-width: 0; }
+    .sug.reciente img { width: 52px; height: 52px; }
+    .sug.reciente .titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sug.reciente .titulo.verde { color: var(--verde); }
+    .sug.reciente .canal { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sug.reciente .guardado { width: 36px; height: 36px; }
+    .sug.reciente .guardado .ic { width: 24px; height: 24px; }
+    .sug.reciente .guardado.lleno span { width: 22px; height: 22px; }
+    .sug.reciente .guardado.lleno .ic { width: 13px; height: 13px; }
+    .sug .lupa.redonda { width: 52px; height: 52px; border-radius: 50%; background: #2a2a2a; }
     .sug .quitarReciente .ic { width: 14px; height: 14px; }
     .borrarRecientes { display: block; margin: 18px auto 8px; background: none; border: 1px solid #ffffff4d; color: var(--texto);
       border-radius: 999px; padding: 8px 18px; font-weight: 700; font-size: 14px; cursor: pointer; }
@@ -1097,6 +1107,7 @@
           const texto = c.artista + " - " + c.titulo;
           campo.value = texto; salirDeEscribir();
           buscar(texto, true);   // la buscamos en YouTube y suena directo
+          apuntarCancionReciente({ titulo: c.titulo, canal: c.artista, img: c.img }, texto);
         });
         el.querySelector("img").src = c.img;
         el.querySelector(".titulo").textContent = c.titulo;
@@ -1108,26 +1119,55 @@
     // ----- 🕘 Búsquedas recientes (como Spotify) -----
     // Guardamos las últimas 15 palabras que buscaste. Salen debajo de la barra
     // cuando tocas el buscador y todavía no has escrito nada.
-    let recientes = leer("busquedasRecientes", []);
-    function apuntarBusqueda(texto) {
-      recientes = [texto, ...recientes.filter(x => x.toLowerCase() !== texto.toLowerCase())].slice(0, 15);
+    // Cada reciente es una CANCIÓN que tocaste (con su portada, como Spotify)
+    // o una PALABRA que buscaste.  { tipo: "cancion", c: {...} }  o  { tipo: "texto", texto }
+    let recientes = leer("busquedasRecientes", []).map(x => typeof x === "string" ? { tipo: "texto", texto: x } : x);
+    const llaveReciente = (x) => x.tipo === "texto" ? "t:" + x.texto.toLowerCase() : "c:" + normalizar(x.c.titulo + x.c.canal);
+    function apuntarReciente(nuevo) {
+      const llave = llaveReciente(nuevo);
+      recientes = [nuevo, ...recientes.filter(x => llaveReciente(x) !== llave)].slice(0, 20);
       guardar("busquedasRecientes", recientes);
+    }
+    function apuntarBusqueda(texto) { apuntarReciente({ tipo: "texto", texto }); }
+    function apuntarCancionReciente(c, textoQueSeQuita) {
+      // Si la canción vino de una búsqueda escrita, quitamos esa palabra (ya está la canción)
+      if (textoQueSeQuita) recientes = recientes.filter(x => !(x.tipo === "texto" && x.texto === textoQueSeQuita));
+      apuntarReciente({ tipo: "cancion", c: { id: c.id || null, titulo: c.titulo, canal: c.canal, img: c.img } });
     }
     function pintarRecientes() {
       cajaSug.innerHTML = "";
       if (!recientes.length || campo.value.trim()) return;
-      cajaSug.insertAdjacentHTML("beforeend", '<div class="tituloRecientes">Búsquedas recientes</div>');
-      recientes.forEach(texto => {
+      cajaSug.insertAdjacentHTML("beforeend", '<div class="tituloRecientes">Recientes</div>');
+      recientes.forEach(x => {
         const el = document.createElement("div");
-        el.className = "sug";
-        el.innerHTML = `<span class="lupa">${icono("reloj")}</span><div class="frase"></div>
-          <button class="iconoBoton quitarReciente" title="Quitar">${icono("equis")}</button>`;
-        el.querySelector(".frase").textContent = texto;
-        el.onclick = () => { campo.value = texto; salirDeEscribir(); buscar(texto); };
-        // La ✕ quita solo esa búsqueda
+        el.className = "sug reciente";
+        if (x.tipo === "cancion") {
+          const c = x.c;
+          const suena = posicion >= 0 && cola[posicion] && mismaCancion(cola[posicion], c);
+          el.innerHTML = `<img alt=""><div><div class="titulo"></div><div class="canal"></div></div>
+            <button class="guardado" title="Guardar en carpeta"></button>
+            <button class="iconoBoton quitarReciente" title="Quitar">${icono("equis")}</button>`;
+          el.querySelector("img").src = c.img;
+          el.querySelector(".titulo").textContent = c.titulo;
+          el.querySelector(".titulo").classList.toggle("verde", !!suena);
+          el.querySelector(".canal").textContent = "Canción • " + c.canal;
+          const guardar_ = el.querySelector(".guardado");
+          pintarCorazon(guardar_, c);
+          guardar_.onclick = async (e) => {
+            e.stopPropagation();
+            try { abrirHoja(await conVideo(c)); } catch (err) { avisar("No se pudo: " + err.message); }
+          };
+          el.onclick = () => { salirDeEscribir(); apuntarReciente(x); reproducirLista([{ ...c }], 0, "Búsquedas recientes"); };
+        } else {
+          el.innerHTML = `<span class="lupa redonda">${icono("buscar")}</span><div><div class="titulo"></div><div class="canal">Búsqueda</div></div>
+            <button class="iconoBoton quitarReciente" title="Quitar">${icono("equis")}</button>`;
+          el.querySelector(".titulo").textContent = x.texto;
+          el.onclick = () => { campo.value = x.texto; salirDeEscribir(); buscar(x.texto); };
+        }
+        // La ✕ quita solo esa
         el.querySelector(".quitarReciente").onclick = (e) => {
           e.stopPropagation();
-          recientes = recientes.filter(x => x !== texto);
+          recientes = recientes.filter(y => y !== x);
           guardar("busquedasRecientes", recientes);
           pintarRecientes();
           campo.focus();
@@ -1191,7 +1231,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "48 · 31 oct";
+    const VERSION = "49 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1339,6 +1379,7 @@
           // Si estás ordenando o acabas de deslizarla, tocarla no la pone a sonar
           if (lista.classList.contains("ordenando") || fila.dataset.recienDeslizada) return;
           reproducirLista(canciones, i, nombreListaPintada);
+          if (vistaActual === "buscar" && canciones === ultimaLista.canciones) apuntarCancionReciente(c);   // a "Recientes"
         };
         // Truco: en cuanto APOYAS el dedo (antes de soltarlo) ya empieza a cargar
         fila.onpointerdown = () => precargar(c.id);

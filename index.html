@@ -186,7 +186,7 @@
 
     /* ----- Lista de canciones ----- */
     .cancion {
-      display: grid; grid-template-columns: 24px 48px 1fr auto; gap: 12px;
+      display: grid; grid-template-columns: 24px 48px 1fr auto auto; gap: 12px;
       align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer;
     }
     .cancion:hover { background: #ffffff0d; }
@@ -359,6 +359,9 @@
     #letraGrande .progreso span { width: auto; }
     #letraGrande .btnPlay { width: 64px; height: 64px; }
     #letraGrande .btnPlay .ic { width: 28px; height: 28px; }
+    /* Avisito que sale abajo un momento ("Se reproducirá a continuación") */
+    #avisito { position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 50;
+      background: #fff; color: #000; font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 24px #0008; white-space: nowrap; margin: 0; }
     .creditoLetra { font-size: 11px; color: #ffffff99; margin-top: 10px; }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
@@ -411,7 +414,16 @@
     .grande .progreso { max-width: none; flex-wrap: wrap; justify-content: space-between; gap: 4px; color: #ffffffb3; }
     .grande .progreso input { flex: 1 0 100%; }
     .grande .progreso span { width: auto; }
-    .grande .botones { gap: 40px; }
+    .grande .botones { gap: 28px; }
+    /* Botón repetir: gris apagado, verde encendido (con un "1" si repite solo esta canción) */
+    .grande .botones .btnRepetir { width: 36px; height: 36px; color: #ffffffb3; position: relative; }
+    .grande .botones .btnRepetir .ic { width: 24px; height: 24px; }
+    .grande .botones .btnRepetir.activo { color: var(--verde); }
+    .grande .botones .btnRepetir.activo::after { content: ""; position: absolute; bottom: -2px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--verde); }
+    .grande .botones .btnRepetir .uno { position: absolute; top: 3px; right: 1px; font-size: 9px; font-weight: 800; background: var(--verde); color: #000; border-radius: 50%; width: 13px; height: 13px; display: grid; place-items: center; }
+    .grande .botones .hueco { width: 36px; }
+    .puntosFila { color: var(--gris); width: 28px !important; }
+    .puntosFila .ic { width: 20px; height: 20px; }
     .grande .botones .iconoBoton { width: 52px; height: 52px; color: #fff; }
     .grande .botones .iconoBoton .ic { width: 34px; height: 34px; }
     .grande .btnPlay { width: 68px; height: 68px; }
@@ -482,7 +494,7 @@
       /* La rayita de progreso pegada abajo del mini reproductor */
       .rayita { display: block; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; border-radius: 2px; background: #ffffff33; overflow: hidden; }
       .rayita i { display: block; height: 100%; width: 0; background: #fff; }
-      .cancion { grid-template-columns: 22px 44px 1fr auto; gap: 12px; padding: 6px 2px; }
+      .cancion { grid-template-columns: 22px 44px 1fr auto auto; gap: 6px 10px; padding: 6px 2px; }
       .cancion img { width: 44px; height: 44px; }
       .cabCarpeta .tapa { width: 120px; }
       .cabCarpeta h3 { font-size: 24px; }
@@ -517,6 +529,7 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-nota" viewBox="0 0 24 24"><path d="M9 17.5V6.2a1 1 0 0 1 .76-.97l9-2.25A1 1 0 0 1 20 4v11.5a3 3 0 1 1-2-2.83V7.3l-7 1.75v8.45a3 3 0 1 1-2-2.83z"/></symbol>
     <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></g></symbol>
+    <symbol id="i-repetir" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l3 3-3 3"/><path d="M4 12V9.5A3.5 3.5 0 0 1 7.5 6H20"/><path d="M7 21l-3-3 3-3"/><path d="M20 12v2.5a3.5 3.5 0 0 1-3.5 3.5H4"/></g></symbol>
     <symbol id="i-puntos" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></symbol>
     <symbol id="i-cola" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></symbol>
     <symbol id="i-masCirculo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v9M7.5 12h9"/></g></symbol>
@@ -607,9 +620,11 @@
         <span class="tTotal">0:00</span>
       </div>
       <div class="botones">
+        <span class="hueco"></span>
         <button class="iconoBoton" data-accion="anterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
         <button class="btnPlay" data-accion="play" title="Play / Pausa"></button>
         <button class="iconoBoton" data-accion="siguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
+        <button class="iconoBoton btnRepetir" id="btnRepetir" title="Repetir"><svg class="ic"><use href="#i-repetir"/></svg></button>
       </div>
       <div class="barraAbajo">
         <button class="iconoBoton" id="btnCola" title="Cola"><svg class="ic"><use href="#i-cola"/></svg></button>
@@ -664,6 +679,18 @@
       <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
     </div>
   </div>
+
+  <!-- ===== MENÚ ⋮ DE CADA CANCIÓN DE UNA LISTA ===== -->
+  <div class="fondoHoja" id="fondoMenuCancion" hidden>
+    <div class="hoja">
+      <div class="agarre"></div>
+      <div class="cabeceraHoja"><img id="menuTapa" alt=""><div><b id="menuTitulo"></b><span id="menuArtista"></span></div></div>
+      <button class="opcion" id="menuSiguiente"><svg class="ic"><use href="#i-siguiente"/></svg>Reproducir a continuación</button>
+      <button class="opcion" id="menuFinal"><svg class="ic"><use href="#i-cola"/></svg>Añadir al final de la cola</button>
+      <button class="opcion" id="menuCarpeta"><svg class="ic"><use href="#i-mas"/></svg>Añadir a una carpeta</button>
+    </div>
+  </div>
+  <div class="aviso" id="avisito" hidden></div>
 
   <!-- ===== HOJA DE LA COLA (lo que va a sonar) ===== -->
   <div class="fondoHoja" id="fondoCola" hidden>
@@ -1024,7 +1051,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "35 · 31 oct";
+    const VERSION = "36 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1153,7 +1180,8 @@
           <span class="num">${i + 1}</span>
           <img src="${c.img}" alt="" loading="lazy">
           <div style="min-width:0"><div class="titulo"></div><div class="canal"></div></div>
-          <button class="corazon" title="Guardar en carpeta"></button>`;
+          <button class="corazon" title="Guardar en carpeta"></button>
+          <button class="iconoBoton puntosFila" title="Más opciones">${icono("puntos")}</button>`;
         // textContent (y no innerHTML) para que un título raro no rompa la página
         fila.querySelector(".titulo").textContent = c.titulo;
         fila.querySelector(".canal").textContent = c.canal;
@@ -1161,6 +1189,7 @@
         fila.onclick = () => reproducirLista(canciones, i, nombreListaPintada);
         // Truco: en cuanto APOYAS el dedo (antes de soltarlo) ya empieza a cargar
         fila.onpointerdown = () => precargar(c.id);
+        fila.querySelector(".puntosFila").onclick = (e) => { e.stopPropagation(); abrirMenuCancion(c); };
         fila.querySelector(".corazon").onclick = async (e) => {
           e.stopPropagation();
           try { abrirHoja(await conVideo(c)); } catch (err) { alertaSuave("No se pudo guardar: " + err.message); }
@@ -1380,8 +1409,11 @@
     function alCambiarEstado(n, estado) {
       const E = YT.PlayerState;
       if (n === activo) {
-        if (estado === E.ENDED) siguiente();
-        if (estado === E.PLAYING) { cargarExtras(); precargarVecinas(); silencio.play().catch(() => {}); }
+        if (estado === E.ENDED) {
+          if (repetir === "una") { reproductor.seekTo(0, true); reproductor.playVideo(); }
+          else siguiente();
+        }
+        if (estado === E.PLAYING) { cargarExtras(); prepararRadio(); precargarVecinas(); silencio.play().catch(() => {}); }
         if (estado === E.PAUSED) silencio.pause();
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
@@ -1545,7 +1577,96 @@
       guardar("historial", historial);
     }
 
-    function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
+    function siguiente() {
+      if (posicion < cola.length - 1) tocar(posicion + 1);
+      else if (repetir === "todo") tocar(0);                       // vuelve a empezar la lista
+      else prepararRadio(true).then(() => { if (posicion < cola.length - 1) tocar(posicion + 1); });
+    }
+
+    // ----- 🔁 REPETIR: apagado → toda la lista → solo esta canción → apagado -----
+    let repetir = leer("repetir", "no");
+    function pintarRepetir() {
+      const b = $("btnRepetir");
+      b.classList.toggle("activo", repetir !== "no");
+      b.innerHTML = icono("repetir") + (repetir === "una" ? '<span class="uno">1</span>' : "");
+      b.title = { no: "Repetir", todo: "Repitiendo la lista", una: "Repitiendo esta canción" }[repetir];
+    }
+    $("btnRepetir").onclick = () => {
+      repetir = { no: "todo", todo: "una", una: "no" }[repetir];
+      guardar("repetir", repetir);
+      pintarRepetir();
+      avisar({ no: "Repetir desactivado", todo: "Repitiendo la lista", una: "Repitiendo esta canción" }[repetir]);
+    };
+    pintarRepetir();
+
+    // ----- 📻 RADIO AUTOMÁTICA (como Spotify) -----
+    // Cuando estás en las últimas canciones de la lista, añadimos al final canciones
+    // parecidas: de los artistas que suenan ahora y de los que escuchas seguido.
+    let buscandoRadio = false;
+    async function prepararRadio(yaMismo = false) {
+      if (repetir !== "no" || buscandoRadio || posicion < 0) return;
+      if (!yaMismo && posicion < cola.length - 2) return;   // aún quedan canciones: tranquilos
+      buscandoRadio = true;
+      try {
+        const artistas = [...new Set([cola[posicion], ...cola.slice(-3), ...historial.slice(0, 5)]
+          .filter(Boolean).map(c => partesDelTitulo(c).artista).filter(Boolean))].slice(0, 4);
+        const yaEstan = cola.map(c => normalizar(partesDelTitulo(c).cancion));
+        let nuevas = [];
+        for (const artista of artistas) {
+          const deApple = (await itunes(artista, 15)).filter(c => normalizar(c.artista).includes(normalizar(artista)));
+          nuevas.push(...deApple);
+        }
+        const vistas = new Set();
+        nuevas = nuevas.filter(c => {
+          const n = normalizar(c.titulo.replace(/\(.*?\)/g, ""));
+          if (vistas.has(n) || yaEstan.some(t => t && (t.includes(n) || n.includes(t)))) return false;
+          vistas.add(n);
+          return true;
+        }).sort(() => Math.random() - 0.5).slice(0, 10)   // mezcladas, para que no sea siempre igual
+          .map(c => ({ titulo: c.titulo, canal: c.artista, img: c.img, id: null }));
+        // Hacemos una cola NUEVA (copia): así no metemos canciones dentro de tus carpetas
+        if (nuevas.length) cola = [...cola, ...nuevas];
+      } finally { buscandoRadio = false; }
+    }
+
+    // ----- ⋮ DE CADA CANCIÓN: reproducir a continuación / al final / carpeta -----
+    let cancionMenu = null;
+    function abrirMenuCancion(c) {
+      cancionMenu = c;
+      $("menuTapa").src = c.img;
+      $("menuTitulo").textContent = c.titulo;
+      $("menuArtista").textContent = c.canal;
+      $("fondoMenuCancion").hidden = false;
+      history.pushState({ vista: vistaActual, capa: "menuCancion" }, "");
+    }
+    function meterEnCola(c, alFinal) {
+      const copia = { ...c };   // copia: así la misma canción puede estar dos veces sin líos
+      if (posicion < 0) return reproducirLista([copia], 0, "Tu cola");
+      cola = [...cola];         // cola nueva: no tocamos la carpeta original
+      cola.splice(alFinal ? cola.length : posicion + 1, 0, copia);
+      precargarVecinas();
+      avisar(alFinal ? "Añadida al final de la cola" : "Sonará a continuación");
+    }
+    function desdeMenu(hacer) {
+      window.addEventListener("popstate", () => setTimeout(hacer, 30), { once: true });
+      history.back();
+    }
+    $("menuSiguiente").onclick = () => desdeMenu(() => meterEnCola(cancionMenu, false));
+    $("menuFinal").onclick = () => desdeMenu(() => meterEnCola(cancionMenu, true));
+    $("menuCarpeta").onclick = () => desdeMenu(async () => {
+      try { abrirHoja(await conVideo(cancionMenu)); } catch (err) { avisar("No se pudo: " + err.message); }
+    });
+    $("fondoMenuCancion").onclick = (e) => { if (e.target.id === "fondoMenuCancion") history.back(); };
+
+    // Avisito blanco que sale 2 segundos abajo
+    let esperaAviso = null;
+    function avisar(texto) {
+      const a = $("avisito");
+      a.textContent = texto;
+      a.hidden = false;
+      clearTimeout(esperaAviso);
+      esperaAviso = setTimeout(() => a.hidden = true, 2000);
+    }
     // Como en Spotify: si la canción ya lleva más de 3 segundos, ⏮ la empieza de nuevo
     function anterior() {
       if (reproductor?.getCurrentTime && reproductor.getCurrentTime() > 3) return reproductor.seekTo(0, true);
@@ -1617,6 +1738,7 @@
       if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
       if (estado.capa !== "opciones") $("fondoOpciones").hidden = true;
       if (estado.capa !== "cola") $("fondoCola").hidden = true;
+      if (estado.capa !== "menuCancion") $("fondoMenuCancion").hidden = true;
       if (estado.capa !== "letra") $("letraGrande").hidden = true;
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
     });

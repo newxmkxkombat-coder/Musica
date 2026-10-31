@@ -306,55 +306,80 @@
 
     /* ===================== PANTALLA "REPRODUCIENDO" (se abre al tocar el mini) ===================== */
     #pantalla {
-      position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center;
-      padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
-      background: linear-gradient(180deg, #2b4a36 0%, #121214 70%);
+      position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; isolation: isolate;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(20px + env(safe-area-inset-bottom, 0px));
+      background: #121212;
       transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1); overflow-y: auto;
     }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
-    .barraArriba { width: 100%; max-width: 440px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .barraArriba small { display: block; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #ffffffb3; }
-    .barraArriba b { display: block; text-align: center; font-size: 13px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Como en Spotify: la portada ocupa TODO el fondo de la pantalla */
+    #fondoPortada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transform: scale(1.34); }
+    /* Sombras arriba y abajo para que las letras blancas se lean bien */
+    #pantalla::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+      background: linear-gradient(180deg, #000a 0%, #0000 22%, #0000 45%, #000c 75%, #000f 100%); }
+    /* Cuando el reproductor ya está detrás, quitamos el fondo propio para que se vea */
+    #pantalla.videoDetras { background: transparent; }
+    #pantalla.videoDetras #fondoPortada { visibility: hidden; }
+    .barraArriba { width: 100%; max-width: 440px; display: flex; align-items: center; justify-content: space-between; }
+    .barraArriba small { display: block; text-align: center; font-size: 12px; color: #ffffffd9; }
+    .barraArriba b { display: block; text-align: center; font-size: 14px; font-weight: 800; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .barraArriba .iconoBoton { color: var(--texto); }
     .barraArriba .iconoBoton .ic { width: 26px; height: 26px; }
-    .grande { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px; }
-    /* La portada (y el vídeo si lo pides). YouTube pide que su reproductor se vea. */
-    /* El hueco donde se ve la portada en la pantalla grande */
-    #huecoVideo { width: 100%; aspect-ratio: 1; max-height: 52vh; max-width: 52vh; margin: 0 auto; }
-    /* TRUCO DE VELOCIDAD: el reproductor vive SIEMPRE dentro de la pantalla visible,
-       escondido DEBAJO del contenido. Si estuviera fuera de la pantalla, el móvil lo
-       pondría "a dormir" (más lento) para ahorrar batería. */
-    #video { position: fixed; left: 0; top: 140px; width: 200px; height: 200px; z-index: 0;
-             border-radius: 8px; overflow: hidden; background: #000; }
-    #video.enPantalla { z-index: 31; box-shadow: 0 20px 50px #000b; }
+    .grande { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; flex: 1; justify-content: flex-end; }
+    /* El reproductor de YouTube (con la portada encima).
+       TRUCO DE VELOCIDAD: vive SIEMPRE dentro de la pantalla visible, escondido DEBAJO
+       del contenido. Si estuviera fuera de la pantalla, el móvil lo pondría "a dormir". */
+    #video { position: fixed; left: 0; top: 140px; width: 200px; height: 200px; z-index: 0; overflow: hidden; background: #000; }
+    /* Con la pantalla grande abierta, se pone de fondo a pantalla completa (debajo de los botones) */
+    #video.enPantalla { inset: 0; width: auto; height: auto; z-index: 29; }
     /* Truco de velocidad: YouTube elige la calidad según el TAMAÑO del reproductor.
        En "solo música" lo dejamos pequeñito (escondido detrás de la portada), así
        carga un vídeo de baja calidad: menos datos y suena antes. */
     #video iframe { position: absolute; top: 50%; left: 50%; width: 356px; height: 200px; transform: translate(-50%, -50%); }
-    #video.conVideo iframe { width: 178%; height: 100%; }
+    /* Con vídeo: lo agrandamos para que llene la pantalla (recortando los lados) */
+    #video.conVideo iframe { height: 100%; width: auto; aspect-ratio: 16 / 9; min-width: 100%; }
     #video iframe.dormido { opacity: 0; pointer-events: none; }
-    #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+    #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transform: scale(1.34); }
     #video.conVideo #portada { display: none; }
+    /* Botón "Cambiar a vídeo" (pastilla negra, como Spotify) */
     #btnVideo {
-      position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid #ffffff26; cursor: pointer; background: #000000b3; backdrop-filter: blur(8px);
-      color: var(--texto); font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+      align-self: flex-start; display: inline-flex; align-items: center; gap: 10px;
+      border: none; cursor: pointer; background: #000000b3; backdrop-filter: blur(8px);
+      color: var(--texto); font-size: 14px; font-weight: 700; padding: 10px 18px; border-radius: 999px;
     }
-    #btnVideo .ic { width: 14px; height: 14px; }
+    #btnVideo .ic { width: 18px; height: 18px; }
     .nombreGrande { display: flex; align-items: center; gap: 12px; }
+    .nombreGrande > img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; flex: none; background: #282828; }
     .nombreGrande > div { flex: 1; min-width: 0; }
     .nombreGrande .titulo { font-size: 22px; font-weight: 800; }
-    .nombreGrande .canal { font-size: 15px; }
-    .nombreGrande .corazon .ic { width: 26px; height: 26px; }
-    .grande .progreso { max-width: none; flex-wrap: wrap; justify-content: space-between; gap: 4px; }
+    .nombreGrande .canal { font-size: 16px; color: #ffffffb3; }
+    /* El botón de guardar: ⊕ si no está guardada, ✓ verde si ya está (como Spotify) */
+    .guardado { width: 40px; height: 40px; display: grid; place-items: center; background: none; border: none; cursor: pointer; color: #fff; flex: none; }
+    .guardado .ic { width: 30px; height: 30px; }
+    .guardado.lleno span { width: 30px; height: 30px; border-radius: 50%; background: var(--verde); color: #000; display: grid; place-items: center; }
+    .guardado.lleno .ic { width: 18px; height: 18px; }
+    .grande .progreso { max-width: none; flex-wrap: wrap; justify-content: space-between; gap: 4px; color: #ffffffb3; }
     .grande .progreso input { flex: 1 0 100%; }
     .grande .progreso span { width: auto; }
-    .grande .botones { gap: 36px; }
-    .grande .botones .iconoBoton { width: 52px; height: 52px; }
-    .grande .botones .iconoBoton .ic { width: 32px; height: 32px; }
-    .grande .btnPlay { width: 66px; height: 66px; }
+    .grande .botones { gap: 40px; }
+    .grande .botones .iconoBoton { width: 52px; height: 52px; color: #fff; }
+    .grande .botones .iconoBoton .ic { width: 34px; height: 34px; }
+    .grande .btnPlay { width: 68px; height: 68px; }
     .grande .btnPlay .ic { width: 30px; height: 30px; }
+    .barraAbajo { display: flex; justify-content: flex-end; }
+    .barraAbajo .iconoBoton { color: #fff; }
+    .barraAbajo .iconoBoton .ic { width: 24px; height: 24px; }
+    /* Hoja de opciones (⋮) y cola */
+    .opcion { display: flex; align-items: center; gap: 16px; width: 100%; padding: 14px 4px; background: none; border: none;
+              color: var(--texto); font-size: 16px; font-weight: 600; cursor: pointer; text-align: left; }
+    .opcion .ic { width: 24px; height: 24px; color: #ffffffb3; }
+    .cabeceraHoja { display: flex; gap: 12px; align-items: center; padding-bottom: 14px; margin-bottom: 6px; border-bottom: 1px solid #ffffff1a; }
+    .cabeceraHoja img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; }
+    .cabeceraHoja div { min-width: 0; }
+    .cabeceraHoja b, .cabeceraHoja span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cabeceraHoja span { color: var(--gris); font-size: 13px; }
+    .hoja h4 { font-size: 15px; margin: 14px 0 6px; }
 
     /* ===================== MÓVIL ===================== */
     @media (max-width: 700px) {
@@ -443,6 +468,9 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-nota" viewBox="0 0 24 24"><path d="M9 17.5V6.2a1 1 0 0 1 .76-.97l9-2.25A1 1 0 0 1 20 4v11.5a3 3 0 1 1-2-2.83V7.3l-7 1.75v8.45a3 3 0 1 1-2-2.83z"/></symbol>
     <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></g></symbol>
+    <symbol id="i-puntos" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></symbol>
+    <symbol id="i-cola" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></symbol>
+    <symbol id="i-masCirculo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v9M7.5 12h9"/></g></symbol>
     <symbol id="i-volumen" viewBox="0 0 24 24"><path d="M4 9.5v5a1 1 0 0 0 1 1h3l4.4 3.7a1 1 0 0 0 1.6-.8V5.6a1 1 0 0 0-1.6-.8L8 8.5H5a1 1 0 0 0-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M17 9a4.5 4.5 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></symbol>
   </svg>
 
@@ -509,16 +537,18 @@
 
   <!-- ===== PANTALLA "REPRODUCIENDO" (grande) ===== -->
   <section id="pantalla" aria-label="Reproduciendo">
+    <img id="fondoPortada" alt="">
     <div class="barraArriba">
       <button class="iconoBoton" id="cerrarPantalla" title="Cerrar"><svg class="ic"><use href="#i-abajo"/></svg></button>
       <div><small>Reproduciendo desde</small><b id="desde">Mi Música</b></div>
-      <span style="width:40px"></span>
+      <button class="iconoBoton" id="btnOpciones" title="Más opciones"><svg class="ic"><use href="#i-puntos"/></svg></button>
     </div>
     <div class="grande">
-      <div id="huecoVideo"></div>
+      <button id="btnVideo"></button>
       <div class="nombreGrande">
+        <img class="tapaActual" alt="">
         <div><div class="titulo nombreActual"></div><div class="canal artistaActual"></div></div>
-        <button class="corazon corazonActual" title="Guardar en carpeta"></button>
+        <button class="guardado corazonActual" title="Guardar en carpeta"></button>
       </div>
       <div class="progreso">
         <input type="range" class="barraTiempo" min="0" max="1000" value="0">
@@ -529,6 +559,9 @@
         <button class="iconoBoton" data-accion="anterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
         <button class="btnPlay" data-accion="play" title="Play / Pausa"></button>
         <button class="iconoBoton" data-accion="siguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
+      </div>
+      <div class="barraAbajo">
+        <button class="iconoBoton" id="btnCola" title="Cola"><svg class="ic"><use href="#i-cola"/></svg></button>
       </div>
     </div>
   </section>
@@ -541,7 +574,30 @@
     <div id="reproductorYT1"></div>
     <div id="reproductorYT2"></div>
     <img id="portada" alt="">
-    <button id="btnVideo"></button>
+  </div>
+
+  <!-- ===== HOJA DE OPCIONES (⋮) ===== -->
+  <div class="fondoHoja" id="fondoOpciones" hidden>
+    <div class="hoja">
+      <div class="agarre"></div>
+      <div class="cabeceraHoja"><img class="tapaActual" alt=""><div><b class="nombreActual"></b><span class="artistaActual"></span></div></div>
+      <button class="opcion" id="opGuardar"><svg class="ic"><use href="#i-mas"/></svg>Añadir a una carpeta</button>
+      <button class="opcion" id="opCola"><svg class="ic"><use href="#i-cola"/></svg>Ver la cola</button>
+      <button class="opcion" id="opVideo"></button>
+      <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
+    </div>
+  </div>
+
+  <!-- ===== HOJA DE LA COLA (lo que va a sonar) ===== -->
+  <div class="fondoHoja" id="fondoCola" hidden>
+    <div class="hoja">
+      <div class="agarre"></div>
+      <h3>Cola</h3>
+      <h4>Sonando ahora</h4>
+      <div class="cabeceraHoja"><img class="tapaActual" alt=""><div><b class="nombreActual" style="color:var(--verde)"></b><span class="artistaActual"></span></div></div>
+      <h4 id="desdeCola"></h4>
+      <div id="listaCola"></div>
+    </div>
   </div>
 
   <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
@@ -839,7 +895,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "24 · 31 oct";
+    const VERSION = "25 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -979,7 +1035,9 @@
     function pintarCorazon(btn, cancion) {
       const si = estaGuardada(cancion);
       btn.classList.toggle("lleno", si);
-      btn.innerHTML = icono(si ? "corazonLleno" : "corazon");
+      // En la pantalla grande usamos el estilo nuevo de Spotify: ⊕ o ✓ verde
+      if (btn.classList.contains("guardado")) btn.innerHTML = si ? `<span>${icono("check")}</span>` : icono("masCirculo");
+      else btn.innerHTML = icono(si ? "corazonLleno" : "corazon");
     }
 
     // Pone en verde (con barritas que bailan) la canción que está sonando
@@ -1281,7 +1339,7 @@
       todos(".artistaActual").forEach(el => el.textContent = c.canal);
       todos(".corazonActual").forEach(b => pintarCorazon(b, c));
       $("desde").textContent = nombreCola;
-      $("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
+      ponerPortadaGrande(c.id);
       document.title = c.titulo + " · Mi Música";
       actualizarNotificacion(c);
       apuntarEnHistorial(c);
@@ -1289,6 +1347,18 @@
       ponerProgreso(0, 0);
       marcarSonando();
     }
+
+    // Portada para el fondo: probamos la de alta calidad (1280px); si el vídeo no la tiene,
+    // YouTube devuelve una imagen gris pequeñita, y entonces usamos la normal.
+    function ponerPortadaGrande(id) {
+      const normal = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+      const prueba = new Image();
+      prueba.onload = () => { if (cola[posicion]?.id === id) ponerFondo(prueba.naturalWidth > 200 ? prueba.src : normal); };
+      prueba.onerror = () => { if (cola[posicion]?.id === id) ponerFondo(normal); };
+      prueba.src = `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
+      ponerFondo(normal);   // mientras tanto, la normal
+    }
+    function ponerFondo(url) { $("portada").src = url; $("fondoPortada").src = url; }
 
     function apuntarEnHistorial(c) {
       historial = [c, ...historial.filter(x => x.id !== c.id)].slice(0, 30);
@@ -1329,24 +1399,21 @@
     // Coloca el reproductor justo encima del hueco de la portada (o lo vuelve a esconder)
     let esperaVideo = null;
     function colocarVideo() {
-      const video = $("video");
       clearTimeout(esperaVideo);
       if (!$("pantalla").classList.contains("abierta")) {
-        video.classList.remove("enPantalla");
-        video.style.cssText = "";             // vuelve a su escondite
+        $("video").classList.remove("enPantalla");      // vuelve a su escondite
+        $("pantalla").classList.remove("videoDetras");
         return;
       }
-      // Esperamos a que termine la animación de subir la pantalla y medimos el hueco
+      // Esperamos a que termine la animación de subir la pantalla y lo ponemos de fondo
       esperaVideo = setTimeout(() => {
-        const hueco = $("huecoVideo").getBoundingClientRect();
-        Object.assign(video.style, { left: hueco.left + "px", top: hueco.top + "px", width: hueco.width + "px", height: hueco.height + "px" });
-        video.classList.add("enPantalla");
+        $("video").classList.add("enPantalla");
+        $("pantalla").classList.add("videoDetras");
       }, 330);
     }
     // Cada vez que la pantalla grande se abre o se cierra (por botón o por "atrás"), lo colocamos
     new MutationObserver(colocarVideo).observe($("pantalla"), { attributes: true, attributeFilter: ["class"] });
-    window.addEventListener("resize", colocarVideo);
-    $("pantalla").addEventListener("scroll", colocarVideo);
+
     $("mini").onclick = () => { if (window.innerWidth <= 700) abrirPantalla(); };
     $("cerrarPantalla").onclick = cerrarPantalla;
 
@@ -1362,6 +1429,8 @@
       if (estado.capa !== "pantalla") $("pantalla").classList.remove("abierta");
       if (estado.capa !== "busqueda") { $("contenido").classList.remove("escribiendo"); campo.blur(); }
       if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
+      if (estado.capa !== "opciones") $("fondoOpciones").hidden = true;
+      if (estado.capa !== "cola") $("fondoCola").hidden = true;
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
     });
 
@@ -1439,9 +1508,46 @@
     function aplicarModoVideo() {
       const ver = leer("verVideo", false);
       $("video").classList.toggle("conVideo", ver);
-      $("btnVideo").innerHTML = ver ? icono("nota") + "Solo música" : icono("video") + "Ver vídeo";
+      $("btnVideo").innerHTML = ver ? icono("nota") + "Cambiar a audio" : icono("video") + "Cambiar a vídeo";
+      $("opVideo").innerHTML = $("btnVideo").innerHTML;
     }
-    $("btnVideo").onclick = () => { guardar("verVideo", !leer("verVideo", false)); aplicarModoVideo(); };
+    function cambiarModoVideo() { guardar("verVideo", !leer("verVideo", false)); aplicarModoVideo(); }
+    $("btnVideo").onclick = cambiarModoVideo;
+
+    // ----- Hojas ⋮ (opciones) y ≡ (cola) -----
+    function abrirCapa(id, capa) {
+      if (posicion < 0) return;
+      $(id).hidden = false;
+      history.pushState({ vista: vistaActual, capa }, "");
+    }
+    // Cierra la hoja de opciones y, cuando ya se cerró, hace lo siguiente
+    function desdeOpciones(hacer) {
+      window.addEventListener("popstate", () => setTimeout(hacer, 30), { once: true });
+      history.back();
+    }
+    $("btnOpciones").onclick = () => abrirCapa("fondoOpciones", "opciones");
+    $("opGuardar").onclick = () => desdeOpciones(() => abrirHoja(cola[posicion]));
+    $("opCola").onclick = () => desdeOpciones(abrirCola);
+    $("opVideo").onclick = () => desdeOpciones(cambiarModoVideo);
+    $("opYouTube").onclick = () => desdeOpciones(() => { reproductor?.pauseVideo(); window.open("https://www.youtube.com/watch?v=" + cola[posicion].id); });
+    $("btnCola").onclick = abrirCola;
+    function abrirCola() {
+      $("desdeCola").textContent = "A continuación: " + nombreCola;
+      const caja = $("listaCola");
+      caja.innerHTML = "";
+      cola.slice(posicion + 1).forEach((c, k) => {
+        const fila = document.createElement("div");
+        fila.className = "opcionCarpeta";
+        fila.innerHTML = `<img class="mini" alt=""><span class="nombre"></span>`;
+        fila.querySelector("img").src = c.img;
+        fila.querySelector(".nombre").textContent = c.titulo;
+        fila.onclick = () => { history.back(); tocar(posicion + 1 + k); };
+        caja.appendChild(fila);
+      });
+      if (!caja.children.length) caja.innerHTML = '<p class="canal">No hay más canciones en la cola.</p>';
+      abrirCapa("fondoCola", "cola");
+    }
+    ["fondoOpciones", "fondoCola"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
     aplicarModoVideo();
 
     // ----- ¿Estás usando Brave? -----

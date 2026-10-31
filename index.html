@@ -1312,7 +1312,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "59 · 31 oct";
+    const VERSION = "60 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2793,7 +2793,10 @@
           const r = await fetch("https://lrclib.net/api/search?" + intento);
           if (!r.ok) continue;
           // Solo letras del MISMO artista (si no, salía la letra de otra canción con el mismo nombre)
-          let resultados = (await r.json()).filter(x => (x.syncedLyrics || x.plainLyrics) && esDelArtista(x.artistName) && !x.instrumental);
+          let resultados = (await r.json()).filter(x => (x.syncedLyrics || x.plainLyrics) && esDelArtista(x.artistName) && !x.instrumental)
+            // Y que dure parecido: si la canción dura 6:33 y la letra es de una de 4:00, es OTRA canción
+            // (dejamos 25 segundos de margen porque los vídeos a veces traen intro o final extra)
+            .filter(x => !dura || !x.duration || Math.abs(x.duration - dura) <= 25);
           // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
           if (exigirDuracion(intento)) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
           if (!resultados.length) continue;

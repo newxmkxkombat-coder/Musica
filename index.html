@@ -1010,12 +1010,12 @@
     }
 
     // Pregunta a YouTube y devuelve una lista de canciones (gasta 1 de tus ~100 búsquedas diarias)
-    // Guardamos las búsquedas 1 día: si repites una, sale al instante y no gasta tu clave
+    // Guardamos las búsquedas 7 días: si repites una, sale al instante y no gasta tu clave
     let memoriaBusquedas = leer("memoriaBusquedas", {});
     async function buscarEnYouTube(texto) {
       const llave = texto.toLowerCase().trim();
       const guardada = memoriaBusquedas[llave];
-      if (guardada && Date.now() - guardada.cuando < 24 * 3600 * 1000) return guardada.lista;
+      if (guardada && Date.now() - guardada.cuando < 7 * 24 * 3600 * 1000) return guardada.lista;   // 7 días
       const clave = leer("claveYT", "");
       if (!clave) throw new Error("sin clave");
       const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
@@ -1030,9 +1030,9 @@
         img: v.snippet.thumbnails.medium.url
       }));
       memoriaBusquedas[llave] = { cuando: Date.now(), lista };
-      // Solo guardamos las 60 más recientes para no llenar la memoria del móvil
+      // Solo guardamos las 150 más recientes para no llenar la memoria del móvil
       const llaves = Object.keys(memoriaBusquedas).sort((a, b) => memoriaBusquedas[b].cuando - memoriaBusquedas[a].cuando);
-      llaves.slice(60).forEach(k => delete memoriaBusquedas[k]);
+      llaves.slice(150).forEach(k => delete memoriaBusquedas[k]);
       guardar("memoriaBusquedas", memoriaBusquedas);
       return lista;
     }
@@ -1393,7 +1393,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "69 · 31 oct";
+    const VERSION = "70 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {

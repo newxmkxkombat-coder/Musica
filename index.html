@@ -1237,7 +1237,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "52 · 31 oct";
+    const VERSION = "53 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1386,7 +1386,7 @@
           if (lista.classList.contains("ordenando") || fila.dataset.recienDeslizada) return;
           if (vistaActual === "buscar" && canciones === ultimaLista.canciones) {
             // Como Spotify: desde una búsqueda suena ESA canción y luego la radio
-            // (10 del mismo artista y después canciones parecidas, variaditas)
+            // (la radio de Deezer, mezclada con tus gustos)
             reproducirLista([{ ...c }], 0, "Radio de " + partesDelTitulo(c).artista);
             apuntarCancionReciente(c);   // a "Recientes"
           } else reproducirLista(canciones, i, nombreListaPintada);
@@ -1797,7 +1797,7 @@
       if (n === activo) {
         if (estado === E.ENDED) {
           if (repetir === "una") { reproductor.seekTo(0, true); reproductor.playVideo(); }
-          else siguiente();
+          else siguiente(false);
         }
         if (estado === E.PLAYING) { cargarExtras(); prepararRadio(); precargarVecinas(); silencio.play().catch(() => {}); quiereSonar = true; pausaAjena = false; }
         if (estado === E.PAUSED) {
@@ -1937,7 +1937,7 @@
         todos(".tapaActual").forEach(img => img.src = c.img);
         todos(".btnPlay").forEach(b => b.classList.add("cargando"));
         conVideo(c).then(() => { if (posicion === i && cola[i] === c) tocar(i); })
-                   .catch(() => { if (posicion === i) siguiente(); });
+                   .catch(() => { if (posicion === i) siguiente(false); });
         return;
       }
       if (reproductor?.loadVideoById) {
@@ -2013,7 +2013,14 @@
       guardar("historial", historial);
     }
 
-    function siguiente() {
+    // saltada = true cuando TÚ le das a ⏭ (no cuando la canción termina sola)
+    function siguiente(saltada = true) {
+      const c = cola[posicion];
+      if (c && (c.deRadio || nombreCola.startsWith("Radio"))) {
+        const segundo = reproductor?.getCurrentTime?.() || 0;
+        if (saltada && segundo < 30) apuntarSalto(c);     // la quitaste rápido: no te gustó
+        else if (!saltada) apuntarEscuchada(c);           // la escuchaste entera
+      }
       if (posicion < cola.length - 1) tocar(posicion + 1);
       else if (repetir === "todo") tocar(0);                       // vuelve a empezar la lista
       else prepararRadio(true).then(() => { if (posicion < cola.length - 1) tocar(posicion + 1); });
@@ -2036,13 +2043,14 @@
     pintarRepetir();
 
     // ----- 📻 RADIO AUTOMÁTICA (como Spotify) -----
-    // Así funciona:
-    // Le preguntamos a Deezer (gratis, sin llave) dos cosas del artista:
-    //   - sus canciones más escuchadas
-    //   - artistas PARECIDOS (mismo género/estilo) y sus éxitos
-    // Y armamos la cola así: primero unas 10 del mismo artista, y después
-    // variaditas: 3 de artistas parecidos, 1 del artista, 3 parecidas, 1 del artista…
-    let radio = null;   // { artista, delArtista: [...], parecidas: [...] }
+    // Spotify no cuenta su fórmula exacta, pero sí que mezcla tres cosas:
+    //   1) Lo que escucha la gente parecida a ti → aquí usamos la "radio del artista" de
+    //      Deezer (gratis, sin llave), que la arma SU algoritmo con lo que escuchan millones.
+    //   2) Tus gustos → de vez en cuando metemos una canción de TUS carpetas que encaje.
+    //   3) Lo que no te gusta → si saltas una canción en los primeros 30 segundos lo
+    //      apuntamos: las que saltas 2 veces y los artistas que saltas mucho ya no salen.
+    // Además, como Spotify, no ponemos dos seguidas del mismo artista.
+    let radio = null;   // { artista, lista: [...] } canciones que quedan por poner
 
     // Deezer no deja leerlo con fetch desde otra página, así que usamos JSONP
     // (el mismo truco de las sugerencias de YouTube: la respuesta llega como <script>)
@@ -2064,16 +2072,46 @@
     async function cancionesDeRadio(artista) {
       const encontrado = (await deezer("search/artist?q=" + encodeURIComponent(artista) + "&limit=1"))?.data?.[0];
       if (!encontrado) return null;
-      const [top, rel] = await Promise.all([
-        deezer(`artist/${encontrado.id}/top?limit=40`),
-        deezer(`artist/${encontrado.id}/related?limit=20`)
+      const [deLaRadio, top] = await Promise.all([
+        deezer(`artist/${encontrado.id}/radio?limit=60`),   // la radio que arma Deezer
+        deezer(`artist/${encontrado.id}/top?limit=15`)       // los éxitos del artista
       ]);
-      const delArtista = barajar((top?.data || []).slice(0, 25)).map(deDeezer);   // de sus 25 más escuchadas, en desorden
-      const parecidos = barajar(rel?.data || []).slice(0, 8);                    // 8 artistas parecidos al azar
-      const sus = await Promise.all(parecidos.map(a => deezer(`artist/${a.id}/top?limit=6`)));
-      // De cada parecido, 3 canciones al azar de sus éxitos (así no se repite siempre el mismo)
-      const parecidas = barajar(sus.flatMap(d => barajar(d?.data || []).slice(0, 3)).map(deDeezer));
-      return { artista: encontrado.name, delArtista, parecidas };
+      let lista = (deLaRadio?.data || []).map(deDeezer);
+      // Si Deezer no tiene radio de ese artista, la armamos con artistas parecidos
+      if (lista.length < 10) {
+        const rel = await deezer(`artist/${encontrado.id}/related?limit=12`);
+        const sus = await Promise.all(barajar(rel?.data || []).slice(0, 8).map(a => deezer(`artist/${a.id}/top?limit=6`)));
+        lista = lista.concat(barajar(sus.flatMap(d => barajar(d?.data || []).slice(0, 3)).map(deDeezer)));
+      }
+      // Al principio, como Spotify, sale más el artista que escuchas: 3 de sus éxitos delante
+      const exitos = barajar((top?.data || []).map(deDeezer)).slice(0, 3);
+      return { artista: encontrado.name, lista: [...exitos, ...lista] };
+    }
+
+    // ----- Lo que saltas (para no volver a ponértelo) -----
+    let saltadas = leer("saltadas", { canciones: {}, artistas: {} });
+    const llaveCancion = (c) => normalizar(partesDelTitulo(c).cancion || c.titulo);
+    function apuntarSalto(c) {
+      const k = llaveCancion(c), art = normalizar(partesDelTitulo(c).artista || c.canal);
+      saltadas.canciones[k] = (saltadas.canciones[k] || 0) + 1;
+      if (art) saltadas.artistas[art] = (saltadas.artistas[art] || 0) + 1;
+      guardar("saltadas", saltadas);
+    }
+    // Si la escuchas entera, la perdonamos un poco
+    function apuntarEscuchada(c) {
+      const k = llaveCancion(c), art = normalizar(partesDelTitulo(c).artista || c.canal);
+      if (saltadas.canciones[k]) saltadas.canciones[k]--;
+      if (saltadas.artistas[art]) saltadas.artistas[art]--;
+      guardar("saltadas", saltadas);
+    }
+
+    // Una canción de TUS carpetas de alguno de estos artistas (ya tiene vídeo: no gasta búsquedas)
+    function unaTuya(artistas, yaEstan) {
+      const tuyas = carpetas.flatMap(k => k.canciones).filter(c => {
+        const quien = normalizar(c.canal + " " + c.titulo);
+        return artistas.some(a => a && quien.includes(a)) && !yaEstan.has(llaveCancion(c));
+      });
+      return tuyas.length ? { ...tuyas[Math.floor(Math.random() * tuyas.length)] } : null;
     }
 
     let buscandoRadio = false;
@@ -2082,36 +2120,43 @@
       if (!yaMismo && posicion < cola.length - 2) return;   // aún quedan canciones: tranquilos
       buscandoRadio = true;
       try {
-        // ¿De qué artista es la radio? Del que empezó la lista (o del que suena ahora)
-        if (!radio || (!radio.delArtista.length && !radio.parecidas.length)) {
-          const semilla = partesDelTitulo(radio ? cola[posicion] : (cola[0] || cola[posicion])).artista;
-          radio = (semilla && await cancionesDeRadio(semilla)) || { artista: semilla, delArtista: [], parecidas: [] };
+        // Si no hay radio (o se acabó), la pedimos del artista que suena ahora
+        if (!radio || !radio.lista.length) {
+          const semilla = partesDelTitulo(cola[posicion]).artista;
+          radio = (semilla && await cancionesDeRadio(semilla)) || { artista: semilla, lista: [] };
         }
-        const yaEstan = cola.map(c => normalizar(partesDelTitulo(c).cancion || c.titulo));
-        const repetida = (c) => {
-          const n = normalizar(c.titulo.replace(/\(.*?\)/g, ""));
-          return !n || yaEstan.some(t => t && (t.includes(n) || n.includes(t)));
+        const semillaN = normalizar(radio.artista || "");
+        const yaEstan = new Set(cola.map(llaveCancion));
+        const artistaDe = (c) => normalizar(partesDelTitulo(c).artista || c.canal);
+        const sirve = (c) => {
+          const k = llaveCancion(c), art = artistaDe(c);
+          if (!k || yaEstan.has(k)) return false;                       // ya está en la cola
+          if ((saltadas.canciones[k] || 0) >= 2) return false;          // la saltaste 2 veces
+          if (art !== semillaN && (saltadas.artistas[art] || 0) >= 4) return false;   // ese artista no te gusta
+          return true;
         };
-        const sacar = (montón) => { while (montón.length) { const c = montón.shift(); if (!repetida(c)) return c; } return null; };
-        const delArtistaEnCola = cola.filter(c => normalizar(c.canal + " " + c.titulo).includes(normalizar(radio.artista))).length;
         let nuevas = [];
-        let faltanDelArtista = Math.max(0, 10 - delArtistaEnCola);   // primero, hasta tener unas 10 del artista
-        let paso = 0;
-        while (nuevas.length < 12 && (radio.delArtista.length || radio.parecidas.length)) {
-          // Ya hay 10 del artista: 3 parecidas y 1 del artista, 3 parecidas y 1 del artista…
-          const tocaArtista = faltanDelArtista > 0 || paso % 4 === 3 || !radio.parecidas.length;
-          const c = tocaArtista ? (sacar(radio.delArtista) || sacar(radio.parecidas)) : (sacar(radio.parecidas) || sacar(radio.delArtista));
-          if (!c) break;
-          if (faltanDelArtista > 0) faltanDelArtista--; else paso++;
+        let ultimo = artistaDe(cola[cola.length - 1]);
+        radio.lista = radio.lista.filter(sirve);   // fuera las repetidas y las que no te gustan
+        while (nuevas.length < 12 && radio.lista.length) {
+          // Cada 5 canciones, una de las tuyas (si tienes alguna que encaje)
+          if (nuevas.length % 5 === 4) {
+            const tuya = unaTuya([semillaN, ...nuevas.map(artistaDe)], yaEstan);
+            if (tuya && artistaDe(tuya) !== ultimo) { nuevas.push(tuya); yaEstan.add(llaveCancion(tuya)); ultimo = artistaDe(tuya); continue; }
+          }
+          // La siguiente en el orden de Deezer que NO sea del mismo artista que la anterior
+          let i = radio.lista.findIndex(c => artistaDe(c) !== ultimo && !yaEstan.has(llaveCancion(c)));
+          if (i < 0) i = 0;   // solo quedan del mismo artista: ni modo
+          const c = radio.lista.splice(i, 1)[0];
+          if (yaEstan.has(llaveCancion(c))) continue;
           nuevas.push(c);
-          yaEstan.push(normalizar(c.titulo));
+          yaEstan.add(llaveCancion(c));
+          ultimo = artistaDe(c);
         }
         // Si Deezer no respondió, usamos Apple Music como antes (solo del mismo artista)
         if (!nuevas.length) nuevas = await radioDeApple();
         // Hacemos una cola NUEVA (copia): así no metemos canciones dentro de tus carpetas
-        if (nuevas.length) { cola = [...cola, ...nuevas]; precargarVecinas(); }
-        // Se acabaron las canciones de esta radio: la próxima vez seguimos desde el artista que suene
-        if (!radio.delArtista.length && !radio.parecidas.length) radio = { artista: radio.artista, delArtista: [], parecidas: [] };
+        if (nuevas.length) { cola = [...cola, ...nuevas.map(c => ({ ...c, deRadio: true }))]; precargarVecinas(); }
       } finally { buscandoRadio = false; }
     }
 

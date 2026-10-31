@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mi Música</title>
+  <!-- Para poder instalarla como app en el móvil, con su logo -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="iconos/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <meta name="theme-color" content="#121212">
   <style>
     /* ===== COLORES (variables): cámbialos aquí y cambia toda la app ===== */
     :root {
@@ -35,6 +40,8 @@
     }
     aside h1 { font-size: 20px; margin: 0 8px 16px; }
     aside h1 span { color: var(--verde); }
+    aside h1 { display: flex; align-items: center; gap: 8px; }
+    .logo { width: 32px; height: 32px; }
     .menu {
       background: none; border: none; color: var(--gris);
       text-align: left; padding: 10px 8px; border-radius: 6px;
@@ -145,7 +152,7 @@
 
   <!-- ===== BARRA LATERAL ===== -->
   <aside>
-    <h1>🎵 Mi <span>Música</span></h1>
+    <h1><img src="iconos/logo.svg" alt="" class="logo"> Mi <span>Música</span></h1>
     <button class="menu activo" data-vista="buscar">🔍 Buscar</button>
     <button class="menu" data-vista="favoritos">💚 Favoritos</button>
     <!-- Aquí aparece el vídeo cuando suena algo (YouTube exige que se vea) -->
@@ -463,6 +470,9 @@
       document.getElementById("avisoBrave").hidden = true;
     };
     comprobarBrave();
+
+    // Registramos el ayudante para que se pueda instalar como app
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
     mostrarInicio();   // lo primero que se ve al abrir la app
 

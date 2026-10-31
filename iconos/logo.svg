@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2ee86f"/>
+      <stop offset="1" stop-color="#0f7a35"/>
+    </linearGradient>
+  </defs>
+  <!-- Círculo verde de fondo -->
+  <circle cx="256" cy="256" r="256" fill="url(#g)"/>
+  <!-- La M: su pata derecha es el palito de una nota musical -->
+  <path d="M138 352 V166 L256 300 L374 166 V330" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cabeza de la nota -->
+  <ellipse cx="338" cy="352" rx="58" ry="44" transform="rotate(-22 338 352)" fill="#fff"/>
+  <!-- Banderita de la nota -->
+  <path d="M374 166 C 410 190, 430 210, 420 250" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+</svg>

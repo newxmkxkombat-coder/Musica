@@ -2,222 +2,374 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mi Música</title>
   <!-- Para poder instalarla como app en el móvil, con su logo -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="iconos/logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
-  <meta name="theme-color" content="#121212">
+  <meta name="theme-color" content="#0b0b0c">
+  <!-- Tipografía "Figtree": redondita y moderna, parecida a la de Spotify -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Le decimos al navegador que vaya conectando con YouTube desde ya (carga más rápido) -->
+  <link rel="preconnect" href="https://www.youtube.com">
+  <link rel="preconnect" href="https://i.ytimg.com">
   <style>
-    /* ===== COLORES (variables): cámbialos aquí y cambia toda la app ===== */
+    /* ===== COLORES Y MEDIDAS (variables): cámbialos aquí y cambia toda la app ===== */
     :root {
-      --fondo: #121212;
-      --panel: #181818;
-      --tarjeta: #242424;
-      --texto: #ffffff;
-      --gris: #b3b3b3;
-      --verde: #1db954;
+      --fondo: #0b0b0c;          /* negro casi puro, el fondo de todo */
+      --panel: #151517;          /* tarjetas y paneles */
+      --tarjeta: #1f1f22;        /* cosas un poco más claras */
+      --hover: #2a2a2e;          /* al pasar el dedo/ratón */
+      --borde: #ffffff14;        /* bordes finitos y transparentes */
+      --texto: #f5f5f7;
+      --gris: #a1a1aa;
+      --gris2: #6b6b73;
+      --verde: #1ed760;
+      --verde2: #17b84f;
+      --radio: 12px;
+      --fuente: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color-scheme: dark;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
       background: var(--fondo);
       color: var(--texto);
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: var(--fuente);
       font-size: 14px;
-      height: 100vh;
-      height: 100dvh;   /* en el móvil, la altura real sin las barras del navegador */
+      -webkit-font-smoothing: antialiased;
       display: grid;
-      grid-template-columns: 236px 1fr;   /* barra lateral + contenido */
-      grid-template-rows: 1fr 90px;       /* contenido + barra del reproductor */
+      grid-template-columns: 260px 1fr;   /* barra lateral + contenido */
+      grid-template-rows: 1fr auto;       /* contenido + barra del reproductor */
+      gap: 8px;
+      padding: 8px;
+      overflow: hidden;
     }
+    button { font-family: inherit; }
+    img { display: block; }
+
+    /* ----- Iconos (dibujos SVG) ----- */
+    .ic { width: 20px; height: 20px; fill: currentColor; flex: none; }
+    .ic.linea { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ----- Botones: sin el marco azul y con animación al pulsar ----- */
+    button, a, .cancion, .carpeta, .sug { -webkit-tap-highlight-color: transparent; }
+    button:focus { outline: none; }
+    button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }   /* solo con teclado */
+    button { transition: transform .12s ease, background-color .15s ease, color .15s ease, filter .15s ease; }
+    button:active { transform: scale(.9); }
+    .cancion, .carpeta { transition: transform .12s ease, background-color .15s ease; }
+    .cancion:active, .carpeta:active { transform: scale(.985); }
+    @keyframes latido { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+    .latido { animation: latido .28s ease; }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
+    .pop { animation: pop .3s ease; }
+    @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
+
+    /* Botón verde principal y botón "fantasma" con borde */
+    .boton {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--verde); color: #000; border: none; border-radius: 999px;
+      padding: 11px 20px; font-weight: 700; font-size: 14px; cursor: pointer;
+      box-shadow: 0 6px 18px #1ed76033;
+    }
+    .boton:hover { background: #3be477; }
+    .boton.gris { background: transparent; color: var(--texto); border: 1px solid #ffffff2e; box-shadow: none; }
+    .boton.gris:hover { border-color: var(--texto); }
+    .iconoBoton {
+      display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+      background: none; border: none; color: var(--gris); cursor: pointer;
+    }
+    .iconoBoton:hover { color: var(--texto); background: #ffffff0f; }
 
     /* ----- Barra lateral (izquierda) ----- */
     aside {
-      background: #000;
-      padding: 20px 12px;
-      display: flex; flex-direction: column; gap: 6px;
+      background: var(--panel); border-radius: var(--radio); border: 1px solid var(--borde);
+      padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 0;
     }
-    aside h1 { font-size: 20px; margin: 0 8px 16px; }
-    aside h1 span { color: var(--verde); }
-    aside h1 { display: flex; align-items: center; gap: 8px; }
-    .logo { width: 32px; height: 32px; }
+    .marca { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; margin: 0 8px 20px; letter-spacing: -.3px; }
+    .marca span { color: var(--verde); }
+    .logo { width: 34px; height: 34px; filter: drop-shadow(0 4px 10px #1ed76055); }
     .menu {
-      background: none; border: none; color: var(--gris);
-      text-align: left; padding: 10px 8px; border-radius: 6px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 14px;
+      background: none; border: none; color: var(--gris); text-align: left; padding: 11px 12px;
+      border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; position: relative;
     }
-    .menu:hover, .menu.activo { color: var(--texto); background: var(--tarjeta); }
-    .sonandoAhora { margin-top: auto; display: none; }
+    .menu:hover { color: var(--texto); }
+    .menu.activo { color: var(--texto); background: var(--tarjeta); }
+    .menu.activo::before {   /* rayita verde a la izquierda del menú activo */
+      content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--verde);
+    }
+    .menu .ic { width: 22px; height: 22px; }
+
+    .sonandoAhora { margin-top: auto; display: none; padding: 12px; border-radius: 10px; background: var(--tarjeta); border: 1px solid var(--borde); }
     .sonandoAhora.visible { display: block; }
-    .sonandoAhora p { color: var(--gris); font-size: 12px; font-weight: 700; margin: 0 8px 8px; text-transform: uppercase; letter-spacing: 1px; }
-    .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px; text-align: left; }
+    .sonandoAhora p { color: var(--gris); font-size: 11px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.2px; }
+    .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px 12px; text-align: left; }
     .linkClave:hover { color: var(--texto); }
     .linkClave[hidden] { display: none; }
-    /* ----- Botones: sin el marco azul y con animación al pulsar ----- */
-    button, a, .cancion, .carpeta, .sug { -webkit-tap-highlight-color: transparent; }  /* quita el azul del móvil */
-    button:focus { outline: none; }
-    button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }    /* solo con teclado */
-    button { transition: transform .12s ease, filter .12s ease; }
-    button:active { transform: scale(.88); filter: brightness(1.2); }               /* se "hunde" un poquito */
-    .cancion, .carpeta { transition: transform .12s ease; }
-    .cancion:active, .carpeta:active { transform: scale(.98); }
-    @keyframes latido { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
-    .latido { animation: latido .25s ease; }                                       /* el play late al cambiar */
-    @media (prefers-reduced-motion: reduce) { button, .cancion, .carpeta { transition: none; } .latido { animation: none; } }
 
-    /* ----- Biblioteca: carpetas ----- */
-    .carpetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-    .carpeta { background: var(--panel); border-radius: 8px; padding: 12px; cursor: pointer; min-width: 0; }
-    .carpeta:hover { background: var(--tarjeta); }
-    .carpeta .tapa { width: 100%; aspect-ratio: 1; border-radius: 6px; margin-bottom: 8px; object-fit: cover;
-                     background: linear-gradient(135deg, #2ee86f, #0f7a35); display: grid; place-items: center; font-size: 40px; }
-    .carpeta .titulo { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .carpeta .canal { color: var(--gris); font-size: 12px; }
-    .nuevaCarpeta { display: flex; gap: 8px; margin-bottom: 16px; max-width: 480px; }
-    .nuevaCarpeta input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: none; background: var(--tarjeta); color: var(--texto); }
-    .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-    .botonRedondo { width: 52px; height: 52px; border-radius: 50%; font-size: 22px; padding: 0; }
-
-    /* ----- Hoja "Guardar en carpeta" (sale desde abajo) ----- */
-    .fondoHoja { position: fixed; inset: 0; background: #000a; z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
-    .fondoHoja[hidden] { display: none; }
-    .hoja { background: #282828; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; padding: 16px;
-            max-height: 75vh; overflow-y: auto; }
-    .hoja h3 { margin-bottom: 4px; }
-    .hoja .canal { color: var(--gris); font-size: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .opcionCarpeta { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 8px;
-                     background: none; border: none; color: var(--texto); font-size: 15px; cursor: pointer; border-radius: 6px; }
-    .opcionCarpeta:hover { background: #3e3e3e; }
-    .opcionCarpeta .marca { color: var(--verde); font-size: 18px; }
-    .hoja .nuevaCarpeta { margin: 12px 0 8px; }
-    .hoja input { background: #3e3e3e !important; }
-
-    /* Aviso "Ábrela en Brave" (solo sale si NO estás en Brave) */
-    .avisoBrave { background: #fb542b; color: #fff; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
-                  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; line-height: 1.4; }
-    .avisoBrave[hidden] { display: none; }
-    .avisoBrave p { flex: 1 1 220px; }
-    .avisoBrave a { background: #fff; color: #000; font-weight: 700; text-decoration: none;
-                    padding: 10px 16px; border-radius: 999px; white-space: nowrap; }
-    .avisoBrave button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 12px; }
-    /* Tarjeta de bienvenida (para pegar la clave la primera vez) */
-    .bienvenida { background: var(--tarjeta); border-radius: 8px; padding: 20px; max-width: 520px; line-height: 1.6; }
-    .bienvenida h3 { margin-bottom: 8px; }
-    .bienvenida ol { margin: 8px 0 12px 20px; color: var(--gris); }
-    .bienvenida a { color: var(--verde); }
-    .bienvenida .fila { display: flex; gap: 8px; }
-    .bienvenida input { flex: 1; padding: 10px 14px; border-radius: 999px; border: none; background: #3a3a3a; color: var(--texto); }
-
-    /* ----- Contenido principal ----- */
-    main { overflow-y: auto; padding: 20px 24px; background: linear-gradient(#1e1e1e, var(--fondo) 300px); }
-    .buscador { margin-bottom: 20px; max-width: 480px; position: relative; }
-    /* Cajita de sugerencias que sale debajo del buscador */
-    .sugerencias { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 5;
-                   background: #282828; border-radius: 8px; padding: 6px; box-shadow: 0 12px 32px #000c;
-                   max-height: 60vh; overflow-y: auto; }
-    .sugerencias[hidden] { display: none; }
-    .sugerencias h4 { color: var(--gris); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 8px 8px 4px; }
-    .sug { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; min-width: 0; }
-    .sug:hover, .sug.marcada { background: #3e3e3e; }
-    .sug img { width: 40px; height: 40px; border-radius: 4px; flex: none; }
-    .sug .lupa { width: 40px; text-align: center; color: var(--gris); flex: none; }
-    .sug div { min-width: 0; }
-    .sug .titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sug .canal { color: var(--gris); font-size: 12px; }
-    .buscador input {
-      width: 100%; padding: 12px 16px 12px 42px;
-      background: var(--tarjeta) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%23b3b3b3' stroke-width='2.5'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='M13 13l4 4'/%3E%3C/svg%3E") no-repeat 14px center; border-radius: 999px; border: none;
-      color: var(--texto); font-size: 14px;
-    }
-    .buscador input:focus { outline: 2px solid var(--texto); }
-    .boton {
-      background: var(--verde); color: #000; border: none; border-radius: 999px;
-      padding: 10px 18px; font-weight: 700; cursor: pointer;
-    }
-    .boton.gris { background: var(--tarjeta); color: var(--texto); }
-    h2 { font-size: 18px; margin-bottom: 12px; }
-    .aviso { color: var(--gris); padding: 20px 0; line-height: 1.6; }
-
-    /* ----- Lista de canciones ----- */
-    .cancion {
-      display: grid; grid-template-columns: 20px 40px 1fr auto; gap: 12px;
-      align-items: center; padding: 6px 8px; border-radius: 6px; cursor: pointer;
-    }
-    .cancion:hover { background: var(--tarjeta); }
-    .cancion .num { color: var(--gris); text-align: right; font-size: 13px; }
-    .cancion:hover .num { color: var(--texto); }
-    .cancion img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
-    .cancion .titulo { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cancion .canal { color: var(--gris); font-size: 12px; }
-    .cancion.sonando .titulo, .cancion.sonando .num { color: var(--verde); }
-    .corazon { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gris); padding: 4px 8px; }
-    .corazon.lleno { color: var(--verde); }
-
-    /* ----- Barra del reproductor (abajo) ----- */
-    footer {
-      grid-column: 1 / 3; background: var(--panel); border-top: 1px solid #282828;
-      display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; padding: 0 16px; gap: 16px;
-    }
-    .info { display: flex; gap: 10px; align-items: center; min-width: 0; }
-    .info img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; background: var(--tarjeta); }
-    .info div { min-width: 0; }
-    .info .titulo { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .info .canal { color: var(--gris); font-size: 12px; }
-    .controles { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .controles .botones { display: flex; gap: 16px; align-items: center; }
-    .controles button { background: none; border: none; color: var(--texto); font-size: 18px; cursor: pointer; }
-    #btnPlay { background: var(--texto); color: #000; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; }
-    .progreso { display: flex; gap: 8px; align-items: center; width: 100%; font-size: 11px; color: var(--gris); }
-    input[type=range] { flex: 1; accent-color: var(--verde); }
-    .volumen { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-    .volumen input { max-width: 120px; }
-
-    /* El vídeo de YouTube existe pero lo hacemos pequeñito en una esquina
-       (YouTube exige que el reproductor sea visible, no lo escondemos del todo) */
     /* El vídeo se recorta en un cuadrado para que parezca la portada de un disco.
-       YouTube pide que su reproductor se vea (mínimo 200x200), por eso no lo escondemos. */
+       YouTube pide que su reproductor se vea (mínimo 200x200). */
     #video { position: relative; width: 200px; height: 200px; margin: 0 auto;
-             border-radius: 8px; overflow: hidden; background: var(--tarjeta); box-shadow: 0 8px 24px #0008; }
+             border-radius: 10px; overflow: hidden; background: #000; box-shadow: 0 12px 32px #000a; }
+    #video iframe { position: absolute; top: 0; left: 50%; width: 356px; height: 200px; transform: translateX(-50%); }
+    #video iframe.dormido { opacity: 0; pointer-events: none; }   /* los reproductores que precargan */
     /* Portada: la imagen de la canción tapa el vídeo (modo "solo música") */
     #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
     #video.conVideo #portada { display: none; }
-    /* Botón para elegir: ver vídeo o solo música (como en Spotify) */
-    #btnVideo { position: absolute; right: 8px; bottom: 8px; z-index: 2; border: none; cursor: pointer;
-                background: #000c; color: var(--texto); font-size: 12px; font-weight: 700;
-                padding: 6px 10px; border-radius: 999px; }
-    #video iframe.dormido { opacity: 0; pointer-events: none; }   /* el reproductor que precarga */
-    #video iframe { position: absolute; top: 0; left: 50%; width: 356px; height: 200px; transform: translateX(-50%); }
+    #btnVideo {
+      position: absolute; right: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid #ffffff26; cursor: pointer; background: #000000b3; backdrop-filter: blur(8px);
+      color: var(--texto); font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+    }
+    #btnVideo .ic { width: 14px; height: 14px; }
 
-    /* Móvil: la barra lateral pasa arriba */
+    /* ----- Contenido principal ----- */
+    main {
+      overflow-y: auto; padding: 20px 28px 32px; border-radius: var(--radio); border: 1px solid var(--borde);
+      background: linear-gradient(180deg, #1c3a28 0%, var(--panel) 260px);   /* brillo verde arriba */
+      min-width: 0;
+    }
+    .buscador { margin-bottom: 24px; max-width: 520px; position: relative; }
+    .buscador .ic { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gris); pointer-events: none; }
+    .buscador input {
+      width: 100%; padding: 14px 18px 14px 48px; border-radius: 999px; border: 1px solid transparent;
+      background: #ffffff12; color: var(--texto); font-size: 15px; font-family: inherit;
+      transition: background-color .15s, border-color .15s;
+    }
+    .buscador input::placeholder { color: var(--gris); }
+    .buscador input:hover { background: #ffffff1a; }
+    .buscador input:focus { outline: none; border-color: #ffffffcc; background: #ffffff1a; }
+    h2 { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 16px; text-wrap: balance; }
+    .aviso { color: var(--gris); padding: 20px 0; line-height: 1.6; }
+
+    /* Cajita de sugerencias que sale debajo del buscador */
+    .sugerencias { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 5;
+                   background: #232326f2; backdrop-filter: blur(16px); border: 1px solid var(--borde);
+                   border-radius: 12px; padding: 6px; box-shadow: 0 16px 40px #000c; max-height: 60vh; overflow-y: auto; }
+    .sugerencias[hidden] { display: none; }
+    .sugerencias h4 { color: var(--gris); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; padding: 10px 10px 4px; }
+    .sug { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; min-width: 0; }
+    .sug:hover { background: #ffffff12; }
+    .sug img { width: 42px; height: 42px; border-radius: 6px; flex: none; background: var(--tarjeta); }
+    .sug .lupa { width: 42px; display: grid; place-items: center; color: var(--gris); flex: none; }
+    .sug div { min-width: 0; }
+
+    /* ----- Lista de canciones ----- */
+    .cancion {
+      display: grid; grid-template-columns: 28px 48px 1fr auto; gap: 14px;
+      align-items: center; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    }
+    .cancion:hover { background: #ffffff0d; }
+    .cancion img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; background: var(--tarjeta); box-shadow: 0 4px 12px #0006; }
+    .cancion .num { color: var(--gris); text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .titulo { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .canal { color: var(--gris); font-size: 13px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cancion.sonando .titulo, .cancion.sonando .num { color: var(--verde); }
+    .corazon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: none; border: none; cursor: pointer; color: var(--gris); }
+    .corazon:hover { color: var(--texto); }
+    .corazon.lleno { color: var(--verde); }
+    .corazon .ic { width: 22px; height: 22px; }
+
+    /* Barras animadas que salen en la canción que suena */
+    .ecualizador { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
+    .ecualizador i { width: 3px; background: var(--verde); border-radius: 1px; animation: barra 0.9s ease-in-out infinite; }
+    .ecualizador i:nth-child(2) { animation-delay: -.3s; } .ecualizador i:nth-child(3) { animation-delay: -.6s; }
+    @keyframes barra { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+
+    /* ----- Biblioteca: carpetas ----- */
+    .carpetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+    .carpeta { background: #ffffff08; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; cursor: pointer; min-width: 0; }
+    .carpeta:hover { background: #ffffff12; }
+    .tapa {
+      width: 100%; aspect-ratio: 1; border-radius: 8px; margin-bottom: 12px; object-fit: cover;
+      background: linear-gradient(135deg, #2ee86f, #0f5f2c); display: grid; place-items: center; color: #fff;
+      box-shadow: 0 8px 24px #0008;
+    }
+    .tapa .ic { width: 44px; height: 44px; }
+    .nuevaCarpeta { display: flex; gap: 8px; margin-bottom: 20px; max-width: 520px; }
+    .nuevaCarpeta input, .bienvenida input {
+      flex: 1; min-width: 0; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--borde);
+      background: #ffffff12; color: var(--texto); font-family: inherit; font-size: 14px;
+    }
+    .nuevaCarpeta input:focus, .bienvenida input:focus { outline: none; border-color: #ffffffaa; }
+
+    /* Cabecera de una carpeta (portada grande + nombre) */
+    .cabCarpeta { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; }
+    .cabCarpeta .tapa { width: 150px; margin: 0; flex: none; }
+    .cabCarpeta small { color: var(--gris); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+    .cabCarpeta h3 { font-size: 32px; font-weight: 800; letter-spacing: -.8px; line-height: 1.1; margin: 4px 0 6px; text-wrap: balance; }
+    .acciones { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .botonPlayGrande {
+      display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--verde); color: #000; box-shadow: 0 8px 24px #1ed76055;
+    }
+    .botonPlayGrande:hover { background: #3be477; transform: scale(1.05); }
+    .botonPlayGrande .ic { width: 26px; height: 26px; }
+    .acciones .iconoBoton .ic { width: 24px; height: 24px; }
+    .acciones .borrar.seguro { color: #ff5c5c; width: auto; padding: 0 12px; border-radius: 999px; font-weight: 700; gap: 6px; display: inline-flex; }
+
+    /* ----- Hoja "Guardar en carpeta" (sale desde abajo) ----- */
+    .fondoHoja { position: fixed; inset: 0; background: #000b; backdrop-filter: blur(4px); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+    .fondoHoja[hidden] { display: none; }
+    @keyframes subir { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .hoja {
+      background: #1d1d20; width: 100%; max-width: 480px; border-radius: 20px 20px 0 0; border: 1px solid var(--borde);
+      padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 80vh; overflow-y: auto; animation: subir .22s ease;
+    }
+    .hoja .agarre { width: 40px; height: 4px; border-radius: 2px; background: #ffffff33; margin: 0 auto 16px; }
+    .hoja h3 { font-size: 18px; font-weight: 800; }
+    .hoja .canal { margin-bottom: 14px; }
+    .opcionCarpeta {
+      display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; text-align: left;
+      background: none; border: none; color: var(--texto); font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 8px;
+    }
+    .opcionCarpeta:hover { background: #ffffff0f; }
+    .opcionCarpeta .mini { width: 40px; height: 40px; border-radius: 6px; flex: none; object-fit: cover;
+                           background: linear-gradient(135deg, #2ee86f, #0f5f2c); display: grid; place-items: center; color: #fff; }
+    .opcionCarpeta .mini .ic { width: 18px; height: 18px; }
+    .opcionCarpeta .nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .opcionCarpeta .check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--gris2); display: grid; place-items: center; flex: none; }
+    .opcionCarpeta .check.si { background: var(--verde); border-color: var(--verde); color: #000; }
+    .opcionCarpeta .check .ic { width: 14px; height: 14px; }
+    .hoja .nuevaCarpeta { margin: 14px 0 12px; }
+    .hoja .boton.gris { width: 100%; justify-content: center; }
+
+    /* Aviso "Ábrela en Brave" (solo sale si NO estás en Brave) */
+    .avisoBrave { background: linear-gradient(135deg, #fb542b, #e0337a); color: #fff; border-radius: var(--radio); padding: 14px 16px; margin-bottom: 20px;
+                  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; line-height: 1.4; box-shadow: 0 8px 24px #fb542b33; }
+    .avisoBrave[hidden] { display: none; }
+    .avisoBrave p { flex: 1 1 220px; }
+    .avisoBrave a { background: #fff; color: #000; font-weight: 700; text-decoration: none; padding: 10px 18px; border-radius: 999px; white-space: nowrap; }
+    .avisoBrave button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 12px; }
+
+    /* Tarjeta de bienvenida (para pegar la clave la primera vez) */
+    .bienvenida { background: #ffffff0a; border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; max-width: 540px; line-height: 1.6; }
+    .bienvenida h3 { margin-bottom: 8px; font-size: 18px; }
+    .bienvenida ol { margin: 8px 0 14px 20px; color: var(--gris); }
+    .bienvenida a { color: var(--verde); }
+    .bienvenida .fila { display: flex; gap: 8px; }
+
+    /* ----- Barra del reproductor (abajo) ----- */
+    footer {
+      grid-column: 1 / 3; background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+      display: grid; grid-template-columns: 1fr minmax(0, 1.4fr) 1fr; align-items: center; padding: 12px 16px; gap: 16px;
+      position: relative;
+    }
+    .info { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .info img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--tarjeta); box-shadow: 0 6px 16px #0008; flex: none; }
+    .info > div { min-width: 0; }
+    .controles { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+    .controles .botones { display: flex; gap: 18px; align-items: center; }
+    .controles .iconoBoton { color: #d4d4d8; }
+    .controles .iconoBoton:hover { color: #fff; }
+    .controles .iconoBoton .ic { width: 22px; height: 22px; }
+    #btnPlay {
+      display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+      background: #fff; color: #000; box-shadow: 0 4px 14px #0008, inset 0 -2px 0 #0000001a;
+    }
+    #btnPlay:hover { transform: scale(1.06); }
+    #btnPlay:active { transform: scale(.9); }
+    #btnPlay .ic { width: 22px; height: 22px; }
+    .progreso { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; font-size: 11px; color: var(--gris); font-variant-numeric: tabular-nums; }
+    .progreso span { width: 36px; text-align: center; }
+
+    /* Barras deslizantes (progreso y volumen) hechas a mano para que se vean finas */
+    input[type=range] {
+      --pct: 0%;
+      flex: 1; height: 16px; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; min-width: 0;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 4px; border-radius: 4px;
+      background: linear-gradient(to right, #fff var(--pct), #ffffff33 var(--pct));
+    }
+    input[type=range]:hover::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--verde) var(--pct), #ffffff33 var(--pct)); }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: #fff;
+      box-shadow: 0 2px 6px #0008; opacity: 0; transition: opacity .15s;
+    }
+    input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { opacity: 1; }
+    input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: #ffffff33; }
+    input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: #fff; }
+    input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: #fff; }
+    input[type=range]:focus { outline: none; }
+    .volumen { display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: var(--gris); }
+    .volumen input { max-width: 120px; }
+
+    /* ===== MÓVIL ===== */
     @media (max-width: 700px) {
-      body { grid-template-columns: 1fr; grid-template-rows: auto 1fr 136px; }
-      aside { flex-direction: row; flex-wrap: wrap; padding: 8px 16px; align-items: center; }
-      aside h1 { display: none; } .linkClave { margin-left: auto; }
-      .sonandoAhora.visible { flex-basis: 100%; order: 3; margin: 8px 0 4px; }
+      body {
+        grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; gap: 0; padding: 0;
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      aside { flex-direction: row; flex-wrap: wrap; padding: 10px 16px; align-items: center; border-radius: 0; border: none; border-bottom: 1px solid var(--borde); gap: 6px; }
+      .marca { display: none; }
+      .menu { padding: 8px 14px; font-size: 14px; border-radius: 999px; background: var(--tarjeta); gap: 8px; }
+      .menu.activo { background: var(--verde); color: #000; }
+      .menu.activo::before { display: none; }
+      .menu .ic { width: 18px; height: 18px; }
+      .linkClave { margin-left: auto; }
+      .sonandoAhora.visible { flex-basis: 100%; order: 3; margin: 8px 0 2px; background: none; border: none; padding: 0; }
       .sonandoAhora p { display: none; }
-      main { padding: 16px; }
-      footer { grid-column: 1; grid-template-columns: 1fr; gap: 4px; padding: 8px 16px; }
+      main { padding: 16px; border-radius: 0; border: none; }
+      h2 { font-size: 21px; }
+      .cancion { grid-template-columns: 22px 44px 1fr auto; gap: 12px; padding: 6px 4px; }
+      .cancion img { width: 44px; height: 44px; }
+      .cabCarpeta .tapa { width: 110px; }
+      .cabCarpeta h3 { font-size: 24px; }
+      /* El reproductor de abajo pasa a ser una tarjeta tipo "mini reproductor" */
+      footer {
+        grid-column: 1; grid-template-columns: 1fr; gap: 6px; margin: 0 8px 8px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: #1d1d20; box-shadow: 0 -8px 24px #0008;
+      }
+      .info img { width: 48px; height: 48px; }
       .volumen { display: none; }
+      .controles .botones { gap: 28px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- ===== ICONOS: los dibujamos una vez aquí y los usamos con <use href="#..."> ===== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.98-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></symbol>
+    <symbol id="i-pausa" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></symbol>
+    <symbol id="i-siguiente" viewBox="0 0 24 24"><path d="M5 6.2v11.6a1 1 0 0 0 1.55.83L15 13v4.8a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-1V6.2a1 1 0 0 0-1-1H16a1 1 0 0 0-1 1V11L6.55 5.37A1 1 0 0 0 5 6.2z"/></symbol>
+    <symbol id="i-anterior" viewBox="0 0 24 24"><path transform="translate(24 0) scale(-1 1)" d="M5 6.2v11.6a1 1 0 0 0 1.55.83L15 13v4.8a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-1V6.2a1 1 0 0 0-1-1H16a1 1 0 0 0-1 1V11L6.55 5.37A1 1 0 0 0 5 6.2z"/></symbol>
+    <symbol id="i-corazon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 20s-7.2-4.3-9.1-8.8C1.5 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.4 4.1 6.7C19.2 15.7 12 20 12 20z"/></symbol>
+    <symbol id="i-corazonLleno" viewBox="0 0 24 24"><path d="M12 20s-7.2-4.3-9.1-8.8C1.5 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.4 4.1 6.7C19.2 15.7 12 20 12 20z"/></symbol>
+    <symbol id="i-buscar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></g></symbol>
+    <symbol id="i-biblioteca" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 4v16M10 4v16M14.5 4.5l5 15"/></g></symbol>
+    <symbol id="i-aleatorio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c4.5 0 6.5 10 11 10H21M3 17h3.5c1.8 0 3.1-1.6 4.2-3.5M13.3 10.5C14.4 8.6 15.7 7 17.5 7H21M18 4l3 3-3 3M18 14l3 3-3 3"/></g></symbol>
+    <symbol id="i-basura" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></g></symbol>
+    <symbol id="i-atras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-mas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-nota" viewBox="0 0 24 24"><path d="M9 17.5V6.2a1 1 0 0 1 .76-.97l9-2.25A1 1 0 0 1 20 4v11.5a3 3 0 1 1-2-2.83V7.3l-7 1.75v8.45a3 3 0 1 1-2-2.83z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></g></symbol>
+    <symbol id="i-volumen" viewBox="0 0 24 24"><path d="M4 9.5v5a1 1 0 0 0 1 1h3l4.4 3.7a1 1 0 0 0 1.6-.8V5.6a1 1 0 0 0-1.6-.8L8 8.5H5a1 1 0 0 0-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M17 9a4.5 4.5 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></symbol>
+  </svg>
+
   <!-- ===== BARRA LATERAL ===== -->
   <aside>
-    <h1><img src="iconos/logo.svg" alt="" class="logo"> Mi <span>Música</span></h1>
-    <button class="menu activo" data-vista="buscar">🔍 Buscar</button>
-    <button class="menu" data-vista="biblioteca">📚 Tu biblioteca</button>
-    <!-- Aquí aparece el vídeo cuando suena algo (YouTube exige que se vea) -->
+    <div class="marca"><img src="iconos/logo.svg" alt="" class="logo"> Mi <span>Música</span></div>
+    <button class="menu activo" data-vista="buscar"><svg class="ic"><use href="#i-buscar"/></svg>Buscar</button>
+    <button class="menu" data-vista="biblioteca"><svg class="ic"><use href="#i-biblioteca"/></svg>Tu biblioteca</button>
+    <!-- Aquí aparece la portada (y el vídeo si lo pides) cuando suena algo -->
     <div class="sonandoAhora" id="sonandoAhora">
       <p>Sonando ahora</p>
       <div id="video">
-        <!-- Dos reproductores: uno suena y el otro va cargando la siguiente canción -->
+        <!-- Tres reproductores: uno suena, otro guarda la anterior y otro carga la siguiente -->
         <div id="reproductorYT0"></div>
         <div id="reproductorYT1"></div>
+        <div id="reproductorYT2"></div>
         <img id="portada" alt="">
-        <button id="btnVideo">🎬 Ver vídeo</button>
+        <button id="btnVideo"></button>
       </div>
     </div>
     <button class="linkClave" id="btnClave">⚙ Clave de YouTube</button>
@@ -231,7 +383,8 @@
       <button id="cerrarAvisoBrave">Seguir sin Brave</button>
     </div>
     <form class="buscador" id="formBuscar">
-      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off">
+      <svg class="ic"><use href="#i-buscar"/></svg>
+      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off" enterkeyhint="search">
       <div class="sugerencias" id="sugerencias" hidden></div>
     </form>
     <h2 id="tituloLista">Buscar</h2>
@@ -241,14 +394,15 @@
   <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
   <div class="fondoHoja" id="fondoHoja" hidden>
     <div class="hoja">
+      <div class="agarre"></div>
       <h3>Guardar en carpeta</h3>
       <div class="canal" id="hojaCancion"></div>
       <div id="hojaCarpetas"></div>
       <form class="nuevaCarpeta" id="hojaNueva">
         <input id="hojaNombre" placeholder="Nueva carpeta (ej: Para el gym)" autocomplete="off">
-        <button class="boton">Crear</button>
+        <button class="boton"><svg class="ic"><use href="#i-mas"/></svg>Crear</button>
       </form>
-      <button class="boton gris" id="hojaListo" style="width:100%">Listo</button>
+      <button class="boton gris" id="hojaListo">Listo</button>
     </div>
   </div>
 
@@ -256,26 +410,29 @@
   <footer>
     <div class="info">
       <img id="infoImg" alt="">
-      <div><div class="titulo" id="infoTitulo">Nada sonando</div><div class="canal" id="infoCanal"></div></div>
+      <div><div class="titulo" id="infoTitulo">Nada sonando</div><div class="canal" id="infoCanal">Elige una canción</div></div>
     </div>
     <div class="controles">
       <div class="botones">
-        <button id="btnAnterior" title="Anterior">⏮</button>
-        <button id="btnPlay" title="Play / Pausa">▶</button>
-        <button id="btnSiguiente" title="Siguiente">⏭</button>
+        <button class="iconoBoton" id="btnAnterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
+        <button id="btnPlay" title="Play / Pausa"><svg class="ic"><use href="#i-play"/></svg></button>
+        <button class="iconoBoton" id="btnSiguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
       </div>
       <div class="progreso">
         <span id="tiempoActual">0:00</span>
-        <input type="range" id="barraProgreso" min="0" max="100" value="0">
+        <input type="range" id="barraProgreso" min="0" max="1000" value="0" step="1">
         <span id="tiempoTotal">0:00</span>
       </div>
     </div>
-    <div class="volumen">🔊 <input type="range" id="barraVolumen" min="0" max="100" value="80"></div>
+    <div class="volumen"><svg class="ic"><use href="#i-volumen"/></svg><input type="range" id="barraVolumen" min="0" max="100" value="80" style="--pct:80%"></div>
   </footer>
 
   <!-- Script oficial de YouTube: nos da el reproductor -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
+    // Pequeña ayuda para escribir iconos: icono("play") → <svg ...><use href="#i-play"></svg>
+    function icono(nombre) { return `<svg class="ic"><use href="#i-${nombre}"/></svg>`; }
+
     // =====================================================================
     // 1) DATOS: lo que la app "recuerda"
     // =====================================================================
@@ -295,9 +452,9 @@
     let cola = [];                           // canciones que se están mostrando
     let posicion = -1;                       // cuál de la cola está sonando
     let reproductor = null;                  // el reproductor que está sonando ahora
-    let jugadores = [];                      // los dos reproductores de YouTube
-    let activo = 0;                          // cuál de los dos suena (0 o 1)
-    let precarga = { id: null };             // qué canción está cargando el otro
+    let jugadores = [];                      // los tres reproductores de YouTube
+    let cargado = [null, null, null];        // qué canción tiene cargada cada uno
+    let activo = 0;                          // cuál de los tres suena (0, 1 o 2)
     let volumen = 80;
 
     // =====================================================================
@@ -335,9 +492,9 @@
       // El botón "⚙ Clave de YouTube" solo se ve mientras no tengas clave
       document.getElementById("btnClave").hidden = !!leer("claveYT", "");
       if (!leer("claveYT", "")) return mostrarBienvenida();
+      if (ultimaLista.canciones.length) return pintarLista(ultimaLista.titulo, ultimaLista.canciones);
       document.getElementById("tituloLista").textContent = "Buscar";
-      document.getElementById("lista").innerHTML = '<p class="aviso">Escribe una canción o artista y pulsa Enter. 🎧</p>';
-      document.getElementById("campoBuscar").focus();
+      document.getElementById("lista").innerHTML = '<p class="aviso">Escribe una canción, un artista o un trozo de la letra. 🎧</p>';
     }
 
     // =====================================================================
@@ -357,6 +514,7 @@
       const id = idDeEnlace(texto);
       if (id) {
         cola = [{ id, titulo: "Vídeo de YouTube", canal: "", img: `https://i.ytimg.com/vi/${id}/mqdefault.jpg` }];
+        ultimaLista = { titulo: "Enlace", canciones: cola };
         pintarLista("Enlace", cola);
         tocar(0);
         return;
@@ -365,7 +523,8 @@
       const clave = leer("claveYT", "");
       if (!clave) return mostrarBienvenida();
 
-      lista.innerHTML = '<p class="aviso">Buscando…</p>';
+      document.getElementById("tituloLista").textContent = "Buscando…";
+      lista.innerHTML = "";
       // fetch = "ve a esta dirección de internet y tráeme la respuesta"
       const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
                   "&videoCategoryId=10&maxResults=20&q=" + encodeURIComponent(texto) + "&key=" + clave;
@@ -385,8 +544,9 @@
         if (tocarPrimera) tocar(0);
       } catch (e) {
         // Si falla (por ejemplo, clave mala), damos la opción de cambiarla
+        document.getElementById("tituloLista").textContent = "Algo salió mal";
         lista.innerHTML = '<p class="aviso">Error al buscar: ' + e.message +
-          '<br><button class="boton gris" id="btnCambiarClave">Cambiar clave de YouTube</button></p>';
+          '<br><br><button class="boton gris" id="btnCambiarClave">Cambiar clave de YouTube</button></p>';
         document.getElementById("btnCambiarClave").onclick = mostrarBienvenida;
       }
     }
@@ -399,7 +559,8 @@
     document.getElementById("formBuscar").onsubmit = (e) => {
       e.preventDefault();   // evita que la página se recargue
       cerrarSugerencias();
-      const texto = document.getElementById("campoBuscar").value.trim();
+      campo.blur();         // esconde el teclado del móvil
+      const texto = campo.value.trim();
       if (texto) { cambiarVista("buscar", false); buscar(texto); }
     };
 
@@ -468,8 +629,8 @@
       if (frases.length) {
         cajaSug.insertAdjacentHTML("beforeend", "<h4>Sugerencias</h4>");
         frases.forEach(f => {
-          const el = fila('<span class="lupa">🔍</span><div><div class="titulo"></div></div>', () => {
-            campo.value = f; cerrarSugerencias(); cambiarVista("buscar", false); buscar(f);
+          const el = fila(`<span class="lupa">${icono("buscar")}</span><div><div class="titulo"></div></div>`, () => {
+            campo.value = f; cerrarSugerencias(); campo.blur(); cambiarVista("buscar", false); buscar(f);
           });
           el.querySelector(".titulo").textContent = f;
         });
@@ -479,7 +640,7 @@
         canciones.forEach(c => {
           const el = fila('<img alt=""><div><div class="titulo"></div><div class="canal"></div></div>', () => {
             const texto = c.artista + " - " + c.titulo;
-            campo.value = texto; cerrarSugerencias(); cambiarVista("buscar", false);
+            campo.value = texto; cerrarSugerencias(); campo.blur(); cambiarVista("buscar", false);
             buscar(texto, true);   // la buscamos en YouTube y suena directo
           });
           el.querySelector("img").src = c.img;
@@ -500,31 +661,45 @@
     function guardarCarpetas() { guardar("carpetas", carpetas); }
     function estaGuardada(id) { return carpetas.some(k => k.canciones.some(c => c.id === id)); }
 
-    // cabecera = algo que se pone encima de la lista (botones de la carpeta)
+    // cabecera = algo que se pone encima de la lista (portada y botones de la carpeta)
     function pintarLista(titulo, canciones, cabecera = null) {
       document.getElementById("tituloLista").textContent = titulo;
       const lista = document.getElementById("lista");
       lista.innerHTML = "";
       if (cabecera) lista.appendChild(cabecera);
       if (canciones.length === 0) {
-        lista.insertAdjacentHTML("beforeend", '<p class="aviso">No hay canciones aquí todavía. Pulsa el 🤍 de una canción para guardarla.</p>');
+        lista.insertAdjacentHTML("beforeend", '<p class="aviso">No hay canciones aquí todavía. Toca el corazón de una canción para guardarla.</p>');
         return;
       }
       canciones.forEach((c, i) => {
         const fila = document.createElement("div");
-        fila.className = "cancion" + (cola === canciones && posicion === i ? " sonando" : "");
+        fila.className = "cancion";
+        fila.dataset.indice = i;
         const guardada = estaGuardada(c.id);
         fila.innerHTML = `
           <span class="num">${i + 1}</span>
-          <img src="${c.img}" alt="">
+          <img src="${c.img}" alt="" loading="lazy">
           <div style="min-width:0"><div class="titulo"></div><div class="canal"></div></div>
-          <button class="corazon ${guardada ? "lleno" : ""}" title="Guardar en carpeta">${guardada ? "💚" : "🤍"}</button>`;
+          <button class="corazon ${guardada ? "lleno" : ""}" title="Guardar en carpeta">${icono(guardada ? "corazonLleno" : "corazon")}</button>`;
         // textContent (y no innerHTML) para que un título raro no rompa la página
         fila.querySelector(".titulo").textContent = c.titulo;
         fila.querySelector(".canal").textContent = c.canal;
         fila.onclick = () => { cola = canciones; tocar(i); };
         fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); abrirHoja(c); };
         lista.appendChild(fila);
+      });
+      listaPintada = canciones;
+      marcarSonando();
+    }
+
+    // Pone en verde (con barritas que bailan) la canción que está sonando
+    let listaPintada = null;
+    function marcarSonando() {
+      document.querySelectorAll(".cancion").forEach(f => {
+        const i = Number(f.dataset.indice);
+        const suena = listaPintada === cola && i === posicion;
+        f.classList.toggle("sonando", suena);
+        f.querySelector(".num").innerHTML = suena ? '<span class="ecualizador"><i></i><i></i><i></i></span>' : i + 1;
       });
     }
 
@@ -548,13 +723,21 @@
       return nueva;
     }
 
+    // La "tapa" de una carpeta: la portada de su primera canción, o un dibujo
+    function tapaDe(k, clase = "tapa") {
+      return k.canciones.length
+        ? `<img class="${clase}" src="${k.canciones[0].img}" alt="">`
+        : `<div class="${clase}">${icono(k.id === "fav" ? "corazonLleno" : "nota")}</div>`;
+    }
+    function cuantas(n) { return n + (n === 1 ? " canción" : " canciones"); }
+
     function mostrarBiblioteca() {
       document.getElementById("tituloLista").textContent = "Tu biblioteca";
       const lista = document.getElementById("lista");
       lista.innerHTML = `
         <form class="nuevaCarpeta" id="formNueva">
           <input id="nombreNueva" placeholder="Nombre de la nueva carpeta" autocomplete="off">
-          <button class="boton">+ Crear</button>
+          <button class="boton">${icono("mas")}Crear</button>
         </form>
         <div class="carpetas" id="gridCarpetas"></div>`;
       document.getElementById("formNueva").onsubmit = (e) => {
@@ -565,13 +748,9 @@
       carpetas.forEach(k => {
         const el = document.createElement("div");
         el.className = "carpeta";
-        // La tapa de la carpeta es la portada de su primera canción
-        el.innerHTML = k.canciones.length
-          ? `<img class="tapa" src="${k.canciones[0].img}" alt="">`
-          : `<div class="tapa">${k.id === "fav" ? "💚" : "🎵"}</div>`;
-        el.insertAdjacentHTML("beforeend", '<div class="titulo"></div><div class="canal"></div>');
+        el.innerHTML = tapaDe(k) + '<div class="titulo"></div><div class="canal"></div>';
         el.querySelector(".titulo").textContent = k.nombre;
-        el.querySelector(".canal").textContent = k.canciones.length + (k.canciones.length === 1 ? " canción" : " canciones");
+        el.querySelector(".canal").textContent = cuantas(k.canciones.length);
         el.onclick = () => cambiarVista("carpeta:" + k.id);
         grid.appendChild(el);
       });
@@ -581,16 +760,22 @@
       const k = carpetas.find(x => x.id === id);
       if (!k) return cambiarVista("biblioteca");
       const cab = document.createElement("div");
-      cab.className = "acciones";
       cab.innerHTML = `
-        <button class="boton botonRedondo" title="Reproducir todo">▶</button>
-        <button class="boton gris" data-a="mezclar">🔀 Aleatorio</button>
-        <button class="boton gris" data-a="volver">← Biblioteca</button>
-        ${k.id === "fav" ? "" : '<button class="boton gris" data-a="borrar">🗑 Borrar carpeta</button>'}`;
+        <div class="cabCarpeta">
+          ${tapaDe(k)}
+          <div style="min-width:0"><small>Carpeta</small><h3></h3><div class="canal">${cuantas(k.canciones.length)}</div></div>
+        </div>
+        <div class="acciones">
+          <button class="botonPlayGrande" title="Reproducir todo">${icono("play")}</button>
+          <button class="iconoBoton" data-a="mezclar" title="Aleatorio">${icono("aleatorio")}</button>
+          <button class="iconoBoton" data-a="volver" title="Volver a la biblioteca">${icono("atras")}</button>
+          ${k.id === "fav" ? "" : `<button class="iconoBoton borrar" data-a="borrar" title="Borrar carpeta">${icono("basura")}</button>`}
+        </div>`;
+      cab.querySelector("h3").textContent = k.nombre;
       // ▶ Reproducir: la cola pasa a ser TODA la carpeta, empezando por la primera
-      cab.querySelector(".botonRedondo").onclick = () => {
+      cab.querySelector(".botonPlayGrande").onclick = () => {
         if (!k.canciones.length) return;
-        cola = k.canciones; tocar(0); mostrarCarpeta(id);
+        cola = k.canciones; tocar(0);
       };
       cab.querySelector('[data-a="mezclar"]').onclick = () => {
         if (!k.canciones.length) return;
@@ -601,11 +786,12 @@
       const borrar = cab.querySelector('[data-a="borrar"]');
       if (borrar) borrar.onclick = () => {
         // Primer toque avisa, segundo toque borra (sin ventanitas)
-        if (borrar.dataset.seguro) {
+        if (borrar.classList.contains("seguro")) {
           carpetas = carpetas.filter(x => x.id !== id); guardarCarpetas(); cambiarVista("biblioteca");
-        } else { borrar.dataset.seguro = "1"; borrar.textContent = "¿Seguro? Toca otra vez"; }
+        } else { borrar.classList.add("seguro"); borrar.innerHTML = icono("basura") + "¿Borrar? Toca otra vez"; }
       };
       pintarLista(k.nombre, k.canciones, cab);
+      document.getElementById("tituloLista").textContent = "";
     }
 
     // ----- Hoja "Guardar en carpeta" -----
@@ -623,8 +809,8 @@
         const dentro = k.canciones.some(x => x.id === cancionHoja.id);
         const b = document.createElement("button");
         b.className = "opcionCarpeta";
-        b.innerHTML = `<span></span><span class="marca">${dentro ? "✔" : "＋"}</span>`;
-        b.firstElementChild.textContent = k.nombre;
+        b.innerHTML = tapaDe(k, "mini") + `<span class="nombre"></span><span class="check ${dentro ? "si" : ""}">${dentro ? icono("check") : ""}</span>`;
+        b.querySelector(".nombre").textContent = k.nombre;
         // Tocar una carpeta mete o saca la canción de ella
         b.onclick = () => {
           if (dentro) k.canciones = k.canciones.filter(x => x.id !== cancionHoja.id);
@@ -661,11 +847,13 @@
     // =====================================================================
     // 6) EL REPRODUCTOR (YouTube IFrame API) con PRECARGA
     // =====================================================================
-    // Truco tipo Spotify: tenemos DOS reproductores. Mientras uno suena,
-    // el otro carga la siguiente canción en silencio y la deja en pausa.
-    // Cuando acaba la canción, solo cambiamos de reproductor: ¡sin esperas!
+    // Truco tipo Spotify: tenemos TRES reproductores.
+    //  - Uno suena.
+    //  - Otro tiene cargada la canción SIGUIENTE (en silencio y en pausa).
+    //  - Otro tiene cargada la canción ANTERIOR.
+    // Al pulsar ⏭ o ⏮ solo cambiamos de reproductor: ¡suena al instante!
     function onYouTubeIframeAPIReady() {
-      [0, 1].forEach(n => {
+      [0, 1, 2].forEach(n => {
         jugadores[n] = new YT.Player("reproductorYT" + n, {
           width: "100%", height: "100%",
           // controls: 0 quita los botones de YouTube (usamos los nuestros)
@@ -681,83 +869,97 @@
       });
       reproductor = jugadores[activo];
     }
+    const todosListos = () => jugadores.length === 3 && jugadores.every(j => j?.loadVideoById);
 
     function alCambiarEstado(n, estado) {
       const E = YT.PlayerState;
       if (n === activo) {
-        // El que suena: si termina, siguiente; si empieza a sonar, precargamos la que viene
+        // El que suena: si termina, siguiente; si empieza a sonar, precargamos vecinas
         if (estado === E.ENDED) siguiente();
-        if (estado === E.PLAYING) { precargarSiguiente(); silencio.play().catch(() => {}); }
+        if (estado === E.PLAYING) { precargarVecinas(); silencio.play().catch(() => {}); }
         if (estado === E.PAUSED) silencio.pause();
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
-        const btn = document.getElementById("btnPlay");
-        const icono = estado === E.PLAYING ? "⏸" : "▶";
-        if (btn.textContent !== icono) {
-          btn.textContent = icono;
-          // Pequeño "latido" cuando cambia entre play y pausa
-          btn.classList.remove("latido"); void btn.offsetWidth; btn.classList.add("latido");
-        }
-      } else if (estado === E.PLAYING && precarga.id) {
-        // El de reserva: en cuanto arranca, lo pausamos al principio (ya está cargado)
+        ponerIconoPlay(estado === E.PLAYING);
+      } else if (estado === E.PLAYING) {
+        // Uno de reserva: en cuanto arranca, lo pausamos al principio (ya está cargado)
         jugadores[n].pauseVideo();
         jugadores[n].seekTo(0, true);
       }
     }
 
-    function precargarSiguiente() {
-      const sig = cola[posicion + 1];
-      const reserva = jugadores[1 - activo];
-      if (!sig || !reserva?.loadVideoById || precarga.id === sig.id) return;
-      precarga = { id: sig.id };
-      reserva.mute();
-      reserva.loadVideoById(sig.id);
+    function ponerIconoPlay(sonando) {
+      const btn = document.getElementById("btnPlay");
+      const nuevo = sonando ? "pausa" : "play";
+      if (btn.dataset.icono === nuevo) return;
+      btn.dataset.icono = nuevo;
+      btn.innerHTML = icono(nuevo);
+      // Pequeño "latido" cuando cambia entre play y pausa
+      btn.classList.remove("latido"); void btn.offsetWidth; btn.classList.add("latido");
     }
 
-    function cambiarDeReproductor() {
+    // Deja la anterior y la siguiente cargadas en los reproductores de reserva
+    function precargarVecinas() {
+      if (!todosListos()) return;
+      const queremos = [cola[posicion + 1]?.id, cola[posicion - 1]?.id].filter(Boolean);
+      queremos.forEach(id => {
+        if (cargado.some((x, n) => x === id && n !== activo)) return;   // ya está cargada
+        // Buscamos un reproductor libre (que no suene y que no tenga otra que queremos)
+        const libre = [0, 1, 2].find(n => n !== activo && !queremos.includes(cargado[n]));
+        if (libre === undefined) return;
+        cargado[libre] = id;
+        jugadores[libre].mute();
+        jugadores[libre].loadVideoById(id);
+      });
+    }
+
+    function cambiarA(n) {
       const viejo = jugadores[activo];
-      activo = 1 - activo;
-      reproductor = jugadores[activo];
-      viejo.stopVideo();
-      viejo.getIframe().classList.add("dormido");
-      reproductor.getIframe().classList.remove("dormido");
+      viejo.pauseVideo();                 // no la paramos del todo: así "anterior" es instantáneo
+      viejo.mute();
+      activo = n;
+      reproductor = jugadores[n];
+      jugadores.forEach((j, k) => j.getIframe().classList.toggle("dormido", k !== activo));
     }
 
     function tocar(i) {
       if (!cola[i]) return;
       posicion = i;
       const c = cola[i];
-      if (jugadores[0]?.loadVideoById && jugadores[1]?.loadVideoById) {
-        if (precarga.id === c.id) {
-          // ¡Ya estaba cargada! Cambiamos al reproductor de reserva y suena al instante
-          cambiarDeReproductor();
+      if (todosListos()) {
+        const listo = cargado.findIndex((id, n) => id === c.id && n !== activo);
+        if (listo >= 0) {
+          // ¡Ya estaba cargada! Cambiamos a ese reproductor y suena al instante
+          cambiarA(listo);
           reproductor.seekTo(0, true);
           reproductor.unMute(); reproductor.setVolume(volumen);
           reproductor.playVideo();
           // Plan B: si el navegador no la deja sonar, la cargamos de la forma normal
-          const esta = reproductor;
+          const este = reproductor;
           setTimeout(() => {
-            if (esta === reproductor && posicion === i && esta.getPlayerState() !== YT.PlayerState.PLAYING &&
-                esta.getPlayerState() !== YT.PlayerState.PAUSED) esta.loadVideoById(c.id);
+            const s = este.getPlayerState();
+            if (este === reproductor && posicion === i && s !== YT.PlayerState.PLAYING && s !== YT.PlayerState.PAUSED)
+              este.loadVideoById(c.id);
           }, 2500);
         } else {
-          jugadores[1 - activo].stopVideo();
+          cargado[activo] = c.id;
           reproductor.unMute(); reproductor.setVolume(volumen);
           reproductor.loadVideoById(c.id);
         }
-        precarga = { id: null };
       }
       document.getElementById("infoImg").src = c.img;
       document.getElementById("infoTitulo").textContent = c.titulo;
       document.getElementById("infoCanal").textContent = c.canal;
-      document.title = "▶ " + c.titulo;
+      document.title = c.titulo + " · Mi Música";
       document.getElementById("sonandoAhora").classList.add("visible");
       actualizarNotificacion(c);
       // Portada en grande (hqdefault es la imagen más grande)
       document.getElementById("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
-      // Marcamos en verde la que suena
-      document.querySelectorAll(".cancion").forEach((f, j) => f.classList.toggle("sonando", j === i && document.querySelectorAll(".cancion").length === cola.length));
+      // Dejamos la barra a cero para que no se vea el tiempo de la canción anterior
+      ponerProgreso(0, 0);
+      marcarSonando();
     }
+
     // =====================================================================
     // 7) CONTROLES EN LA NOTIFICACIÓN DEL MÓVIL (⏮ ⏯ ⏭)
     // =====================================================================
@@ -798,7 +1000,12 @@
     }
 
     function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
-    function anterior()  { if (posicion > 0) tocar(posicion - 1); }
+    // Como en Spotify: si la canción ya lleva más de 3 segundos, ⏮ la empieza
+    // de nuevo (instantáneo). Si está empezando, va a la anterior.
+    function anterior() {
+      if (reproductor?.getCurrentTime && reproductor.getCurrentTime() > 3) return reproductor.seekTo(0, true);
+      if (posicion > 0) tocar(posicion - 1);
+    }
 
     document.getElementById("btnSiguiente").onclick = siguiente;
     document.getElementById("btnAnterior").onclick = anterior;
@@ -807,23 +1014,34 @@
       if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
       else reproductor.playVideo();
     };
-    document.getElementById("barraVolumen").oninput = (e) => {
-      volumen = Number(e.target.value);
+    const barraVolumen = document.getElementById("barraVolumen");
+    barraVolumen.oninput = () => {
+      volumen = Number(barraVolumen.value);
+      barraVolumen.style.setProperty("--pct", volumen + "%");   // pinta la parte llena
       reproductor?.setVolume(volumen);
     };
-    document.getElementById("barraProgreso").oninput = (e) => {
-      if (!reproductor) return;
-      reproductor.seekTo(reproductor.getDuration() * e.target.value / 100, true);
-    };
+    const barra = document.getElementById("barraProgreso");
+    let arrastrando = false;
+    barra.addEventListener("pointerdown", () => arrastrando = true);
+    barra.addEventListener("change", () => {
+      arrastrando = false;
+      if (reproductor?.getDuration) reproductor.seekTo(reproductor.getDuration() * barra.value / 1000, true);
+    });
+    barra.oninput = () => barra.style.setProperty("--pct", barra.value / 10 + "%");
 
     // Cada medio segundo actualizamos la barra de tiempo
     function formato(seg) { seg = Math.floor(seg || 0); return Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"); }
-    setInterval(() => {
-      if (!reproductor?.getDuration) return;
-      const actual = reproductor.getCurrentTime(), total = reproductor.getDuration();
+    function ponerProgreso(actual, total) {
       document.getElementById("tiempoActual").textContent = formato(actual);
       document.getElementById("tiempoTotal").textContent = formato(total);
-      if (total) document.getElementById("barraProgreso").value = actual / total * 100;
+      if (arrastrando) return;
+      const pct = total ? actual / total * 100 : 0;
+      barra.value = pct * 10;
+      barra.style.setProperty("--pct", pct + "%");
+    }
+    setInterval(() => {
+      if (!reproductor?.getDuration || posicion < 0) return;
+      ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
     }, 500);
 
     // ----- Ver vídeo o solo música -----
@@ -831,7 +1049,7 @@
     function aplicarModoVideo() {
       const ver = leer("verVideo", false);
       document.getElementById("video").classList.toggle("conVideo", ver);
-      document.getElementById("btnVideo").textContent = ver ? "🎵 Solo música" : "🎬 Ver vídeo";
+      document.getElementById("btnVideo").innerHTML = ver ? icono("nota") + "Solo música" : icono("video") + "Ver vídeo";
     }
     document.getElementById("btnVideo").onclick = () => {
       guardar("verVideo", !leer("verVideo", false));
@@ -872,6 +1090,7 @@
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
     mostrarInicio();   // lo primero que se ve al abrir la app
+    ponerIconoPlay(false);
 
     // Atajo: barra espaciadora = play/pausa (si no estás escribiendo)
     document.addEventListener("keydown", (e) => {

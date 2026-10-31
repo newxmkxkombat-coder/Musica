@@ -811,9 +811,15 @@
       $("tituloLista").textContent = "Buscando…";
       $("lista").innerHTML = "";
       try {
-        const lista = await buscarEnYouTube(texto);
+        const lista = resultadosComoSpotify(await buscarEnYouTube(texto));
         ultimaLista = { titulo: 'Resultados para "' + texto + '"', canciones: lista };
         if (vistaActual === "buscar") pintarLista(ultimaLista.titulo, lista);
+        // Debajo, más canciones del mismo artista (de Apple Music: no gasta tu clave)
+        masDelArtista(lista).then(extra => {
+          if (!extra.length || ultimaLista.canciones !== lista) return;   // ya buscaste otra cosa
+          lista.splice(1, 0, ...extra);   // justo después de la canción que buscabas
+          if (vistaActual === "buscar") pintarLista(ultimaLista.titulo, lista);
+        });
         if (tocarPrimera) reproducirLista(lista, 0, texto);
         else precargar(lista[0]?.id);   // la primera suele ser la que eliges: la vamos cargando
       } catch (e) {
@@ -822,6 +828,46 @@
           '<br><br><button class="boton gris" id="btnCambiarClave">Cambiar clave de YouTube</button></p>';
         $("btnCambiarClave").onclick = mostrarBienvenida;
       }
+    }
+
+    // ----- Resultados como Spotify -----
+    // YouTube devuelve 20 vídeos y muchos son LA MISMA canción (oficial, con letra, en vivo...).
+    // Dejamos solo la primera (la mejor) y quitamos las repetidas.
+    const normalizar = (t) => t.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
+    function resultadosComoSpotify(lista) {
+      if (!lista.length) return lista;
+      const vistas = [];   // nombres de canciones que ya pusimos
+      return lista.filter(c => {
+        const titulo = normalizar(c.titulo);
+        if (vistas.some(nombre => titulo.includes(nombre))) return false;   // repetida
+        const nombre = normalizar(partesDelTitulo(c).cancion);
+        if (nombre.length >= 3) vistas.push(nombre);
+        return true;
+      });
+    }
+    // Canciones del mismo artista, sacadas de Apple Music. Todavía no sabemos su vídeo de
+    // YouTube: lo buscamos solo si la tocas (así no gastamos la clave por gusto).
+    async function masDelArtista(lista) {
+      const artista = partesDelTitulo(lista[0]).artista;
+      if (!artista) return [];
+      const yaEstan = lista.map(c => normalizar(c.titulo));
+      const deApple = await itunes(artista, 25);
+      const nombres = new Set();
+      return deApple.filter(c => {
+        const n = normalizar(c.titulo.replace(/\(.*?\)/g, ""));
+        if (!normalizar(c.artista).includes(normalizar(artista))) return false;   // que sea del mismo artista
+        if (nombres.has(n) || yaEstan.some(t => t.includes(n))) return false;       // sin repetidas
+        nombres.add(n);
+        return true;
+      }).slice(0, 10).map(c => ({ titulo: c.titulo, canal: c.artista, img: c.img, id: null }));
+    }
+    // Si una canción aún no tiene vídeo de YouTube, lo buscamos ahora (gasta 1 búsqueda)
+    async function conVideo(c) {
+      if (c.id) return c;
+      const encontrados = await buscarEnYouTube(c.canal + " - " + c.titulo);
+      if (!encontrados.length) throw new Error("No encontrada en YouTube");
+      c.id = encontrados[0].id;   // dejamos la portada bonita de Apple
+      return c;
     }
 
     // Para las recomendaciones: busca "artista - canción" y suena sin cambiar de pantalla
@@ -978,7 +1024,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "34 · 31 oct";
+    const VERSION = "35 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1115,7 +1161,10 @@
         fila.onclick = () => reproducirLista(canciones, i, nombreListaPintada);
         // Truco: en cuanto APOYAS el dedo (antes de soltarlo) ya empieza a cargar
         fila.onpointerdown = () => precargar(c.id);
-        fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); abrirHoja(c); };
+        fila.querySelector(".corazon").onclick = async (e) => {
+          e.stopPropagation();
+          try { abrirHoja(await conVideo(c)); } catch (err) { alertaSuave("No se pudo guardar: " + err.message); }
+        };
         lista.appendChild(fila);
       });
       marcarSonando();
@@ -1417,6 +1466,17 @@
       if (!cola[i]) return;
       posicion = i;
       const c = cola[i];
+      // Canción de "más del artista" sin vídeo todavía: primero lo buscamos y luego suena
+      if (!c.id) {
+        $("mini").hidden = false;
+        todos(".nombreActual").forEach(el => el.textContent = c.titulo);
+        todos(".artistaActual").forEach(el => el.textContent = c.canal);
+        todos(".tapaActual").forEach(img => img.src = c.img);
+        todos(".btnPlay").forEach(b => b.classList.add("cargando"));
+        conVideo(c).then(() => { if (posicion === i && cola[i] === c) tocar(i); })
+                   .catch(() => { if (posicion === i) siguiente(); });
+        return;
+      }
       if (reproductor?.loadVideoById) {
         const listo = todosListos() ? cargado.findIndex((id, n) => id === c.id && n !== activo) : -1;
         if (listo >= 0) {

@@ -978,7 +978,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "33 · 31 oct";
+    const VERSION = "34 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1607,13 +1607,41 @@
     const memoriaLetras = {};  // para no pedir dos veces la misma letra
 
     // Limpia el título de YouTube: quita "(Video Oficial)", "[Lyrics]", "ft. Fulano"...
-    function limpiarTitulo(c) {
-      let t = c.titulo.replace(/\(.*?\)|\[.*?\]/g, " ")
-        .replace(/\b(official|oficial|video|vídeo|videoclip|lyrics?|letra|audio|visualizer|hd|4k)\b/gi, " ")
-        .replace(/\b(ft|feat)\b\.?.*$/i, " ").replace(/[|"“”]/g, " ").replace(/\s+/g, " ").trim();
-      // Si el título no trae el artista ("Artista - Canción"), lo sacamos del canal
-      if (!t.includes(" - ")) t += " " + c.canal.replace(/ - Topic|VEVO|Oficial|Official|Music/gi, "").trim();
-      return t;
+    // Saca del título de YouTube el ARTISTA y la CANCIÓN, quitando lo que sobra:
+    // "Penyair - Mujer Sin Nombre (Video Oficial) ft. X"  →  { artista: "Penyair", cancion: "Mujer Sin Nombre" }
+    function partesDelTitulo(c) {
+      const limpiar = (t) => t.replace(/\(.*?\)|\[.*?\]|【.*?】/g, " ")
+        .replace(/\b(official|oficial|music|video|vídeo|videoclip|lyrics?|letra|audio|visualizer|hd|4k|en vivo|live)\b/gi, " ")
+        .replace(/\s(ft|feat|featuring|prod)\b\.?.*$/i, " ")
+        .replace(/[|"“”#]/g, " ").replace(/\s+/g, " ").trim();
+      const canal = c.canal.replace(/ - Topic|VEVO|Oficial|Official|Music|TV$/gi, "").trim();
+      const t = limpiar(c.titulo);
+      const corte = t.match(/^(.+?)\s[-–—]\s(.+)$/);    // "Artista - Canción"
+      if (corte) return { artista: corte[1].split(/[,&+x]\s|\sy\s/)[0].trim(), cancion: limpiar(corte[2]) };
+      return { artista: canal, cancion: t };
+    }
+
+    // Pregunta a LRCLIB de varias formas, de la más exacta a la más suelta, hasta encontrarla
+    async function buscarLetra(c) {
+      const { artista, cancion } = partesDelTitulo(c);
+      const intentos = [
+        `track_name=${encodeURIComponent(cancion)}&artist_name=${encodeURIComponent(artista)}`,
+        `q=${encodeURIComponent(artista + " " + cancion)}`,
+        `q=${encodeURIComponent(cancion)}`,    // a veces el "artista" era el nombre del canal
+      ];
+      const dura = reproductor?.getDuration?.() || 0;
+      for (const intento of intentos) {
+        const r = await fetch("https://lrclib.net/api/search?" + intento);
+        if (!r.ok) continue;
+        let resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
+        // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
+        if (intento === intentos[2]) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
+        if (!resultados.length) continue;
+        // Preferimos letra con tiempos y que dure lo mismo que el vídeo
+        const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
+        return resultados.sort((a, b) => puntos(b) - puntos(a))[0];
+      }
+      return "nada";
     }
 
     async function cargarLetra(c) {
@@ -1623,18 +1651,11 @@
       $("lineasGrandes").innerHTML = "<p>Buscando la letra…</p>";
       const id = c.id;
       try {
-        if (!memoriaLetras[id]) {
-          const r = await fetch("https://lrclib.net/api/search?q=" + encodeURIComponent(limpiarTitulo(c)));
-          const resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
-          // Preferimos una letra con tiempos y que dure lo mismo que el vídeo
-          const dura = reproductor?.getDuration?.() || 0;
-          const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
-          memoriaLetras[id] = resultados.sort((a, b) => puntos(b) - puntos(a))[0] || "nada";
-        }
+        if (!memoriaLetras[id]) memoriaLetras[id] = await buscarLetra(c);
         if (cola[posicion]?.id !== id) return;   // ya cambiaste de canción
         if (memoriaLetras[id] === "nada") return $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";
         pintarLetra(memoriaLetras[id]);
-      } catch { /* sin internet o sin letra: simplemente no la mostramos */ }
+      } catch { /* sin internet: simplemente no la mostramos */ }
     }
 
     function pintarLetra(x) {

@@ -218,6 +218,11 @@
     .ecualizador { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
     .ecualizador i { width: 3px; background: var(--verde); border-radius: 1px; animation: barra 0.9s ease-in-out infinite; }
     .ecualizador i:nth-child(2) { animation-delay: -.3s; } .ecualizador i:nth-child(3) { animation-delay: -.6s; }
+    /* Las barritas solo salen cuando la música SUENA de verdad. Mientras carga o en pausa,
+       se ve el número en verde (como Spotify). */
+    .numSonando { color: var(--verde); }
+    body:not(.musicaSonando) .ecualizador { display: none; }
+    body.musicaSonando .numSonando { display: none; }
     @keyframes barra { 0%, 100% { height: 4px; } 50% { height: 14px; } }
 
     /* ----- Biblioteca: carpetas ----- */
@@ -1186,7 +1191,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "47 · 31 oct";
+    const VERSION = "48 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1360,7 +1365,7 @@
         const i = Number(f.dataset.indice);
         const suena = listaPintada === cola && i === posicion;
         f.classList.toggle("sonando", suena);
-        f.querySelector(".num").innerHTML = suena ? '<span class="ecualizador"><i></i><i></i><i></i></span>' : i + 1;
+        f.querySelector(".num").innerHTML = suena ? `<span class="ecualizador"><i></i><i></i><i></i></span><span class="numSonando">${i + 1}</span>` : i + 1;
       });
     }
 
@@ -1748,6 +1753,7 @@
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
         ponerIconoPlay(estado === E.PLAYING);
+        document.body.classList.toggle("musicaSonando", estado === E.PLAYING);   // barritas verdes sí/no
         // Mientras carga, el botón de play da vueltas (así sabes que ya va)
         todos(".btnPlay").forEach(b => b.classList.toggle("cargando", estado === E.BUFFERING || estado === -1));
       } else if (estado === E.PLAYING) {
@@ -1864,6 +1870,7 @@
     function tocar(i) {
       if (!cola[i]) return;
       cancelarMezcla();   // si estaba mezclando y tocas otra cosa, cortamos la mezcla
+      document.body.classList.remove("musicaSonando");   // hasta que la nueva suene de verdad
       posicion = i;
       const c = cola[i];
       // Canción de "más del artista" sin vídeo todavía: primero lo buscamos y luego suena

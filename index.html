@@ -1184,7 +1184,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "45 · 31 oct";
+    const VERSION = "46 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2338,11 +2338,14 @@
         if (letraConTiempos) p.onclick = () => { reproductor?.seekTo(l.t, true); seguirLetra(l.t, true); };
         grande.appendChild(p);
       });
-      caja.scrollTop = 0;
       $("tarjetaLetra").classList.remove("completa");
       $("btnLetraCompleta").textContent = "Mostrar letra";
       $("tarjetaLetra").hidden = false;
       $("pantalla").classList.add("conLetra");
+      // OJO: esto va DESPUÉS de mostrar la tarjeta. Si la tarjeta está escondida, el
+      // navegador ignora el "vuelve arriba" y se quedaba donde iba la canción anterior (al final).
+      caja.scrollTo({ top: 0, behavior: "instant" });
+      grande.scrollTo({ top: 0, behavior: "instant" });
       colorDeLetra();
     }
 

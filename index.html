@@ -877,14 +877,15 @@
     <div class="hoja">
       <div class="agarre"></div>
       <h3>Brave está bloqueando el sensor</h3>
-      <p class="canal" style="white-space:normal">Para que funcione "Sacudir para pausar" hay que darle permiso en Brave. Es rápido:</p>
+      <p class="canal" style="white-space:normal">Para que funcione "Sacudir para pausar" hay que darle permiso a esta página en Brave. Es rápido:</p>
       <ol class="pasosSensor">
-        <li>Toca <b>Copiar y abrir Brave</b>.</li>
-        <li>En Brave, mantén apretada la barra de direcciones, toca <b>Pegar</b> y entra. Se abre la <b>Configuración</b> de Brave.</li>
-        <li>Arriba, en <b>Configuración de la búsqueda</b>, escribe <b>sensores</b>. Toca <b>Sensores de movimiento</b> y ponlo en <b>Permitido</b>.</li>
+        <li>Toca <b>Abrir en Brave</b>: se abre esta misma app en una pestaña de Brave.</li>
+        <li>Toca el <b>iconito a la izquierda de la dirección</b> (arriba, al lado de "newxmkxkombat-coder.github.io").</li>
+        <li>Toca <b>Permisos</b> → <b>Sensores de movimiento</b> → <b>Permitir</b>.</li>
         <li>Vuelve aquí y activa otra vez "Sacudir para pausar".</li>
       </ol>
-      <button class="boton" id="btnAbrirBrave" style="width:100%;justify-content:center">Copiar y abrir Brave</button>
+      <button class="boton" id="btnAbrirBrave" style="width:100%;justify-content:center">Abrir en Brave</button>
+      <button class="letraMala" id="btnCopiarAjuste" style="display:block;margin:12px auto 0">Otra forma: copiar la dirección de la configuración</button>
     </div>
   </div>
 
@@ -1350,7 +1351,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "65 · 31 oct";
+    const VERSION = "66 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2826,13 +2827,14 @@
       history.back();   // cerramos el menú ⋮
       setTimeout(() => abrirCapa("fondoSensor", "sensor"), 60);
     }
-    $("btnAbrirBrave").onclick = async () => {
-      try { await navigator.clipboard.writeText("brave://settings/content/sensors"); avisar("Dirección copiada: pégala en Brave"); }
+    // Abre ESTA página en una pestaña de Brave (ahí sí sale el iconito de permisos al lado de la dirección)
+    const abrirEnBrave = () => { location.href = "intent://" + location.host + location.pathname + "#Intent;scheme=https;package=com.brave.browser;end"; };
+    $("btnAbrirBrave").onclick = abrirEnBrave;
+    // Plan B: copiar la dirección de la configuración general (luego hay que buscar "sensores")
+    $("btnCopiarAjuste").onclick = async () => {
+      try { await navigator.clipboard.writeText("brave://settings/content/sensors"); avisar("Copiada: pégala en la barra de Brave y busca \"sensores\""); }
       catch { avisar("Escribe en Brave: brave://settings/content/sensors"); }
-      // Abre la app de Brave (en Android) con una pestaña normal
-      setTimeout(() => {
-        location.href = "intent://" + location.host + location.pathname + "#Intent;scheme=https;package=com.brave.browser;end";
-      }, 700);
+      setTimeout(abrirEnBrave, 900);
     };
     function pintarSacudir() {
       $("opSacudir").innerHTML = icono("sacudir") + "Sacudir para pausar: " + (sacudir ? "<b style='color:var(--verde)'>Sí</b>" : "No");

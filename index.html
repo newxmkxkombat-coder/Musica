@@ -1159,9 +1159,15 @@
           };
           el.onclick = () => { salirDeEscribir(); apuntarReciente(x); reproducirLista([{ ...c }], 0, "Búsquedas recientes"); };
         } else {
-          el.innerHTML = `<span class="lupa redonda">${icono("buscar")}</span><div><div class="titulo"></div><div class="canal">Búsqueda</div></div>
+          // Si ya tenemos guardados los resultados de esa búsqueda, ponemos la portada de la primera canción
+          const guardada = memoriaBusquedas[x.texto.toLowerCase().trim()];
+          const primera = guardada && guardada.lista.length ? resultadosComoSpotify(guardada.lista)[0] : null;
+          el.innerHTML = (primera ? '<img alt="">' : `<span class="lupa redonda">${icono("buscar")}</span>`) +
+            `<div><div class="titulo"></div><div class="canal"></div></div>
             <button class="iconoBoton quitarReciente" title="Quitar">${icono("equis")}</button>`;
           el.querySelector(".titulo").textContent = x.texto;
+          el.querySelector(".canal").textContent = primera ? "Búsqueda • " + primera.canal : "Búsqueda";
+          if (primera) el.querySelector("img").src = primera.img;
           el.onclick = () => { campo.value = x.texto; salirDeEscribir(); buscar(x.texto); };
         }
         // La ✕ quita solo esa
@@ -1231,7 +1237,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "49 · 31 oct";
+    const VERSION = "50 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {

@@ -926,7 +926,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "28 · 31 oct";
+    const VERSION = "29 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -944,14 +944,17 @@
         accesos.appendChild(el);
       };
       carpetas.slice(0, 4).forEach(k => cuadrito(tapaDe(k), k.nombre, () => cambiarVista("carpeta:" + k.id)));
-      historial.slice(0, 8 - accesos.children.length).forEach((c, i) =>
-        cuadrito(`<img class="tapa" src="${c.img}" alt="">`, c.titulo, () => reproducirLista(historial, i, "Escuchado recientemente")));
+      // OJO: guardamos una COPIA del historial tal como se ve ahora. El historial real
+      // cambia de orden cada vez que suena algo, y entonces el número i apuntaría a otra canción.
+      const recientes = historial.slice();
+      recientes.slice(0, 8 - accesos.children.length).forEach((c, i) =>
+        cuadrito(`<img class="tapa" src="${c.img}" alt="">`, c.titulo, () => reproducirLista(recientes, i, "Escuchado recientemente")));
 
       // Escuchado recientemente (suena directo, no gasta tu clave porque ya sabemos su id)
       if (historial.length) {
         seccion("Escuchado recientemente", historial.slice(0, 15).map((c, i) => ({
           titulo: c.titulo, artista: c.canal, img: c.img,
-          alTocar: () => reproducirLista(historial, i, "Escuchado recientemente"),
+          alTocar: () => reproducirLista(recientes, i, "Escuchado recientemente"),
           id: c.id
         })));
       }

@@ -46,6 +46,14 @@
     .sonandoAhora p { color: var(--gris); font-size: 12px; font-weight: 700; margin: 0 8px 8px; text-transform: uppercase; letter-spacing: 1px; }
     .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px; text-align: left; }
     .linkClave:hover { color: var(--texto); }
+    /* Aviso "Ábrela en Brave" (solo sale si NO estás en Brave) */
+    .avisoBrave { background: #fb542b; color: #fff; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+                  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; line-height: 1.4; }
+    .avisoBrave[hidden] { display: none; }
+    .avisoBrave p { flex: 1 1 220px; }
+    .avisoBrave a { background: #fff; color: #000; font-weight: 700; text-decoration: none;
+                    padding: 10px 16px; border-radius: 999px; white-space: nowrap; }
+    .avisoBrave button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 12px; }
     /* Tarjeta de bienvenida (para pegar la clave la primera vez) */
     .bienvenida { background: var(--tarjeta); border-radius: 8px; padding: 20px; max-width: 520px; line-height: 1.6; }
     .bienvenida h3 { margin-bottom: 8px; }
@@ -154,6 +162,11 @@
 
   <!-- ===== CONTENIDO ===== -->
   <main>
+    <div class="avisoBrave" id="avisoBrave" hidden>
+      <p>🦁 <b>Para escuchar sin anuncios, abre esta app en Brave.</b><br>Si no lo tienes, el botón te lleva a instalarlo.</p>
+      <a id="enlaceBrave" href="https://brave.com/download/">Abrir en Brave</a>
+      <button id="cerrarAvisoBrave">Seguir sin Brave</button>
+    </div>
     <form class="buscador" id="formBuscar">
       <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off">
     </form>
@@ -421,6 +434,35 @@
       aplicarModoVideo();
     };
     aplicarModoVideo();
+
+    // ----- ¿Estás usando Brave? -----
+    // Brave añade "navigator.brave" al navegador; los demás navegadores no lo tienen.
+    async function comprobarBrave() {
+      let esBrave = false;
+      try { esBrave = !!(navigator.brave && await navigator.brave.isBrave()); } catch {}
+      if (esBrave || leer("ocultarAvisoBrave", false)) return;
+
+      const enlace = document.getElementById("enlaceBrave");
+      const ua = navigator.userAgent;
+      if (/Android/i.test(ua)) {
+        // Enlace especial de Android: si Brave está instalado abre la app ahí;
+        // si no, Android abre la Play Store directamente en Brave para instalarlo.
+        const direccion = location.host + location.pathname;
+        enlace.href = "intent://" + direccion + "#Intent;scheme=https;package=com.brave.browser;" +
+          "S.browser_fallback_url=" + encodeURIComponent("https://play.google.com/store/apps/details?id=com.brave.browser") + ";end";
+      } else if (/iPhone|iPad|iPod/i.test(ua)) {
+        enlace.href = "https://apps.apple.com/app/brave-private-web-browser/id1052879175";
+        enlace.textContent = "Instalar Brave";
+      } else {
+        enlace.textContent = "Descargar Brave";
+      }
+      document.getElementById("avisoBrave").hidden = false;
+    }
+    document.getElementById("cerrarAvisoBrave").onclick = () => {
+      guardar("ocultarAvisoBrave", true);
+      document.getElementById("avisoBrave").hidden = true;
+    };
+    comprobarBrave();
 
     mostrarInicio();   // lo primero que se ve al abrir la app
 

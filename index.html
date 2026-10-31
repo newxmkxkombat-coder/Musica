@@ -301,6 +301,14 @@
     /* Barrita de los segundos de la mezcla */
     .ajusteMezcla { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 0 8px 14px 48px; color: var(--gris); font-size: 12px; }
     .ajusteMezcla[hidden] { display: none; }
+    #fondoMezcla .ajusteMezcla { padding: 4px 8px 10px; font-size: 13px; }
+    #fondoMezcla .ajusteMezcla b { font-size: 15px; }
+    .ajusteMezcla.apagado { opacity: .4; }
+    .interruptorFila { justify-content: space-between; }
+    .interruptor { width: 44px; height: 26px; border-radius: 13px; background: #ffffff33; position: relative; transition: background .2s; flex: none; }
+    .interruptor::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
+    .encendido .interruptor { background: var(--verde); }
+    .encendido .interruptor::after { transform: translateX(18px); }
     .ajusteMezcla b { grid-column: 1 / -1; grid-row: 1; color: var(--texto); font-size: 13px; font-weight: 600; }
     .ajusteMezcla input { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 2px; outline: none; margin: 10px 0;
       background: linear-gradient(90deg, var(--verde) var(--lleno, 50%), #ffffff33 var(--lleno, 50%)); touch-action: none; }
@@ -814,6 +822,20 @@
     </div>
   </div>
 
+  <!-- ===== HOJA DE LA MEZCLA (se abre manteniendo apretado el botón de mezclar) ===== -->
+  <div class="fondoHoja" id="fondoMezcla" hidden>
+    <div class="hoja">
+      <div class="agarre"></div>
+      <h3>Mezclar canciones</h3>
+      <p class="canal" style="white-space:normal">Cuando una canción está terminando, la siguiente entra poco a poco.</p>
+      <button class="opcion interruptorFila" id="interruptorMezcla"><span>Mezclar canciones</span><i class="interruptor"></i></button>
+      <div class="ajusteMezcla" id="ajusteMezcla2">
+        <span>1 s</span><input type="range" id="barraMezcla2" min="1" max="12" step="1"><span>12 s</span>
+        <b id="textoMezcla2"></b>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
   <div class="fondoHoja" id="fondoHoja" hidden>
     <div class="hoja">
@@ -1276,7 +1298,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "55 · 31 oct";
+    const VERSION = "56 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2514,6 +2536,7 @@
       if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
       if (estado.capa !== "opciones") $("fondoOpciones").hidden = true;
       if (estado.capa !== "cola") $("fondoCola").hidden = true;
+      if (estado.capa !== "mezcla") $("fondoMezcla").hidden = true;
       if (estado.capa !== "menuCancion") $("fondoMenuCancion").hidden = true;
       if (estado.capa !== "letra") $("letraGrande").hidden = true;
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
@@ -2647,18 +2670,44 @@
       $("barraMezcla").value = segundosMezcla;
       $("textoMezcla").textContent = "Duración de la mezcla: " + segundosMezcla + " segundos";
       $("barraMezcla").style.setProperty("--lleno", ((segundosMezcla - 1) / 11 * 100) + "%");
+      // Lo mismo en la hoja que sale al mantener apretado el botón
+      $("interruptorMezcla").classList.toggle("encendido", mezclar);
+      $("ajusteMezcla2").classList.toggle("apagado", !mezclar);
+      $("barraMezcla2").value = segundosMezcla;
+      $("barraMezcla2").disabled = !mezclar;
+      $("textoMezcla2").textContent = "Duración de la mezcla: " + segundosMezcla + " segundos";
+      $("barraMezcla2").style.setProperty("--lleno", ((segundosMezcla - 1) / 11 * 100) + "%");
     }
-    $("btnMezclar").onclick = () => $("opMezclar").onclick();
     $("opMezclar").onclick = () => {
       mezclar = !mezclar;
       guardar("mezclar", mezclar);
       pintarMezclar();
       avisar(mezclar ? "Las canciones se mezclarán" : "Mezcla desactivada");
     };
-    $("barraMezcla").oninput = () => {
-      segundosMezcla = Number($("barraMezcla").value);
+    $("barraMezcla").oninput = $("barraMezcla2").oninput = (e) => {
+      segundosMezcla = Number(e.target.value);
       guardar("segundosMezcla", segundosMezcla);
       pintarMezclar();
+    };
+    $("interruptorMezcla").onclick = () => $("opMezclar").onclick();
+
+    // ✋ MANTENER APRETADO el botón de mezclar (medio segundo) = abre la hoja de la mezcla.
+    // Un toque normal sigue funcionando igual: enciende o apaga.
+    let esperaMantener = null, seAbrioConMantener = false;
+    const botonMezclar = $("btnMezclar");
+    botonMezclar.addEventListener("pointerdown", () => {
+      seAbrioConMantener = false;
+      clearTimeout(esperaMantener);
+      esperaMantener = setTimeout(() => {
+        seAbrioConMantener = true;
+        if (navigator.vibrate) navigator.vibrate(30);   // vibracioncita: "ya se abrió"
+        abrirCapa("fondoMezcla", "mezcla");
+      }, 500);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => botonMezclar.addEventListener(ev, () => clearTimeout(esperaMantener)));
+    botonMezclar.onclick = (e) => {
+      if (seAbrioConMantener) { seAbrioConMantener = false; e.preventDefault(); return; }   // fue "mantener", no "tocar"
+      $("opMezclar").onclick();
     };
     pintarMezclar();
 
@@ -3102,7 +3151,7 @@
         window.addEventListener("pointercancel", soltar);
       };
     }
-    ["fondoOpciones", "fondoCola"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
+    ["fondoOpciones", "fondoCola", "fondoMezcla"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
     aplicarModoVideo();
 
     // ----- ¿Estás usando Brave? -----

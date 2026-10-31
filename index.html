@@ -285,6 +285,13 @@
     .botones .iconoBoton .ic { width: 22px; height: 22px; }
     .btnPlay { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; background: #fff; color: #000; flex: none; }
     .btnPlay .ic { width: 20px; height: 20px; }
+    .btnPlay { position: relative; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    .btnPlay.cargando::after {   /* anillo verde que gira alrededor del play */
+      content: ""; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2.5px solid transparent; border-top-color: var(--verde); border-right-color: var(--verde);
+      animation: girar .8s linear infinite;
+    }
     .progreso { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; font-size: 11px; color: var(--gris); font-variant-numeric: tabular-nums; }
     .progreso span { width: 36px; text-align: center; }
     .derecha { display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: var(--gris); }
@@ -611,19 +618,30 @@
     }
 
     // Pregunta a YouTube y devuelve una lista de canciones (gasta 1 de tus ~100 búsquedas diarias)
+    // Guardamos las búsquedas 1 día: si repites una, sale al instante y no gasta tu clave
+    let memoriaBusquedas = leer("memoriaBusquedas", {});
     async function buscarEnYouTube(texto) {
+      const llave = texto.toLowerCase().trim();
+      const guardada = memoriaBusquedas[llave];
+      if (guardada && Date.now() - guardada.cuando < 24 * 3600 * 1000) return guardada.lista;
       const clave = leer("claveYT", "");
       if (!clave) throw new Error("sin clave");
       const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
                   "&videoCategoryId=10&maxResults=20&q=" + encodeURIComponent(texto) + "&key=" + clave;
       const datos = await (await fetch(url)).json();
       if (datos.error) throw new Error(datos.error.message);
-      return datos.items.map(v => ({
+      const lista = datos.items.map(v => ({
         id: v.id.videoId,
         titulo: decodificar(v.snippet.title),
         canal: decodificar(v.snippet.channelTitle),
         img: v.snippet.thumbnails.medium.url
       }));
+      memoriaBusquedas[llave] = { cuando: Date.now(), lista };
+      // Solo guardamos las 60 más recientes para no llenar la memoria del móvil
+      const llaves = Object.keys(memoriaBusquedas).sort((a, b) => memoriaBusquedas[b].cuando - memoriaBusquedas[a].cuando);
+      llaves.slice(60).forEach(k => delete memoriaBusquedas[k]);
+      guardar("memoriaBusquedas", memoriaBusquedas);
+      return lista;
     }
 
     // Busca y pinta los resultados. tocarPrimera = true: suena la primera directo
@@ -805,7 +823,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "20 · 31 oct";
+    const VERSION = "21 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -830,7 +848,8 @@
       if (historial.length) {
         seccion("Escuchado recientemente", historial.slice(0, 15).map((c, i) => ({
           titulo: c.titulo, artista: c.canal, img: c.img,
-          alTocar: () => reproducirLista(historial, i, "Escuchado recientemente")
+          alTocar: () => reproducirLista(historial, i, "Escuchado recientemente"),
+          id: c.id
         })));
       }
 
@@ -864,6 +883,7 @@
         t.querySelector(".titulo").textContent = c.titulo;
         t.querySelector(".canal").textContent = c.artista;
         t.onclick = c.alTocar || (() => tocarPorNombre(c.artista + " - " + c.titulo));
+        if (c.id) t.onpointerdown = () => precargar(c.id);
         fila.appendChild(t);
       });
       $("lista").appendChild(s);
@@ -929,6 +949,8 @@
         fila.querySelector(".canal").textContent = c.canal;
         pintarCorazon(fila.querySelector(".corazon"), c.id);
         fila.onclick = () => reproducirLista(canciones, i, nombreListaPintada);
+        // Truco: en cuanto APOYAS el dedo (antes de soltarlo) ya empieza a cargar
+        fila.onpointerdown = () => precargar(c.id);
         fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); abrirHoja(c); };
         lista.appendChild(fila);
       });
@@ -1034,6 +1056,7 @@
         } else { borrar.classList.add("seguro"); borrar.innerHTML = icono("basura") + "¿Borrar? Toca otra vez"; }
       };
       pintarLista(k.nombre, k.canciones, cab);
+      precargar(k.canciones[0]?.id);   // por si le das a ▶, ya va cargando
       $("tituloLista").textContent = "";
     }
 
@@ -1137,6 +1160,8 @@
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
         ponerIconoPlay(estado === E.PLAYING);
+        // Mientras carga, el botón de play da vueltas (así sabes que ya va)
+        todos(".btnPlay").forEach(b => b.classList.toggle("cargando", estado === E.BUFFERING || estado === -1));
       } else if (estado === E.PLAYING) {
         // Uno de reserva: en cuanto arranca, lo pausamos al principio (ya está cargado)
         jugadores[n].pauseVideo();
@@ -1207,13 +1232,14 @@
           reproductor.seekTo(0, true);
           reproductor.unMute(); reproductor.setVolume(volumen);
           reproductor.playVideo();
-          // Plan B: si el navegador no la deja sonar, la cargamos de la forma normal
+          // Plan B: si a los 4 segundos ni siquiera empezó (el navegador no la dejó),
+          // la cargamos de la forma normal. Si está "cargando", la dejamos tranquila.
           const este = reproductor;
           setTimeout(() => {
-            const s = este.getPlayerState();
-            if (este === reproductor && posicion === i && s !== YT.PlayerState.PLAYING && s !== YT.PlayerState.PAUSED)
+            const st = este.getPlayerState();
+            if (este === reproductor && posicion === i && (st === -1 || st === YT.PlayerState.CUED))
               este.loadVideoById(c.id);
-          }, 2500);
+          }, 4000);
         } else {
           cargado[activo] = c.id;
           reproductor.unMute(); reproductor.setVolume(volumen);
@@ -1231,6 +1257,7 @@
       document.title = c.titulo + " · Mi Música";
       actualizarNotificacion(c);
       apuntarEnHistorial(c);
+      todos(".btnPlay").forEach(b => b.classList.add("cargando"));
       ponerProgreso(0, 0);
       marcarSonando();
     }

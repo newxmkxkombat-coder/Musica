@@ -332,7 +332,15 @@
         border-radius: 0; gap: 0;
         /* Como Spotify: arriba transparente y abajo se oscurece poco a poco.
            Así se ve lo de detrás y los iconos blancos se leen bien. */
-        background: linear-gradient(180deg, #00000000 0%, #00000000 30%, #00000066 70%, #000000b3 100%);
+        background: transparent;   /* la barra en sí no tiene fondo */
+      }
+      /* La sombra va en una capa aparte, mucho más alta que la barra y que se oscurece
+         muy poco a poco (con muchos pasos). Así no se nota ningún borde ni línea. */
+      nav::before {
+        content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 170px; z-index: -1; pointer-events: none;
+        background: linear-gradient(180deg,
+          #00000000 0%, #00000008 15%, #00000017 30%, #0000002e 45%,
+          #0000004d 58%, #00000073 70%, #0000009e 82%, #000000c7 92%, #000000d9 100%);
       }
       .marca, .linkClave { display: none; }
       .menu { flex-direction: column; gap: 4px; padding: 6px 12px 0; font-size: 12px; font-weight: 500; flex: 1; align-items: center; color: #b3b3b3; }
@@ -740,7 +748,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "18 · 31 oct";
+    const VERSION = "19 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";

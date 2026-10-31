@@ -823,7 +823,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "21 · 31 oct";
+    const VERSION = "22 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -920,7 +920,11 @@
     // 5) PINTAR una lista de canciones
     // =====================================================================
     function guardarCarpetas() { guardar("carpetas", carpetas); }
-    function estaGuardada(id) { return carpetas.some(k => k.canciones.some(c => c.id === id)); }
+    // ¿Son la misma canción? Mismo vídeo, o mismo título aunque sea otro vídeo de YouTube
+    // (por ejemplo, el vídeo oficial y el "Topic" de la misma canción)
+    const limpio = (t = "") => t.toLowerCase().replace(/\(.*?\)|\[.*?\]/g, "").replace(/[^a-z0-9ñáéíóú]+/g, " ").trim();
+    function mismaCancion(a, b) { return a.id === b.id || (limpio(a.titulo) !== "" && limpio(a.titulo) === limpio(b.titulo)); }
+    function estaGuardada(c) { return carpetas.some(k => k.canciones.some(x => mismaCancion(x, c))); }
 
     let listaPintada = null;
     let nombreListaPintada = "";
@@ -947,7 +951,7 @@
         // textContent (y no innerHTML) para que un título raro no rompa la página
         fila.querySelector(".titulo").textContent = c.titulo;
         fila.querySelector(".canal").textContent = c.canal;
-        pintarCorazon(fila.querySelector(".corazon"), c.id);
+        pintarCorazon(fila.querySelector(".corazon"), c);
         fila.onclick = () => reproducirLista(canciones, i, nombreListaPintada);
         // Truco: en cuanto APOYAS el dedo (antes de soltarlo) ya empieza a cargar
         fila.onpointerdown = () => precargar(c.id);
@@ -956,8 +960,8 @@
       });
       marcarSonando();
     }
-    function pintarCorazon(btn, id) {
-      const si = estaGuardada(id);
+    function pintarCorazon(btn, cancion) {
+      const si = estaGuardada(cancion);
       btn.classList.toggle("lleno", si);
       btn.innerHTML = icono(si ? "corazonLleno" : "corazon");
     }
@@ -977,7 +981,7 @@
       if (vistaActual === "biblioteca") mostrarBiblioteca();
       else if (vistaActual.startsWith("carpeta:")) mostrarCarpeta(vistaActual.slice(8));
       else if (vistaActual === "buscar" && ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
-      if (posicion >= 0) todos(".corazonActual").forEach(b => pintarCorazon(b, cola[posicion].id));
+      if (posicion >= 0) todos(".corazonActual").forEach(b => pintarCorazon(b, cola[posicion]));
     }
 
     // =====================================================================
@@ -1073,14 +1077,14 @@
       const caja = $("hojaCarpetas");
       caja.innerHTML = "";
       carpetas.forEach(k => {
-        const dentro = k.canciones.some(x => x.id === cancionHoja.id);
+        const dentro = k.canciones.some(x => mismaCancion(x, cancionHoja));
         const b = document.createElement("button");
         b.className = "opcionCarpeta";
         b.innerHTML = tapaDe(k, "mini") + `<span class="nombre"></span><span class="check ${dentro ? "si" : ""}">${dentro ? icono("check") : ""}</span>`;
         b.querySelector(".nombre").textContent = k.nombre;
         // Tocar una carpeta mete o saca la canción de ella
         b.onclick = () => {
-          if (dentro) k.canciones = k.canciones.filter(x => x.id !== cancionHoja.id);
+          if (dentro) k.canciones = k.canciones.filter(x => !mismaCancion(x, cancionHoja));
           else k.canciones.push(cancionHoja);
           guardarCarpetas(); pintarHoja();
         };
@@ -1251,7 +1255,7 @@
       todos(".tapaActual").forEach(img => img.src = c.img);
       todos(".nombreActual").forEach(el => el.textContent = c.titulo);
       todos(".artistaActual").forEach(el => el.textContent = c.canal);
-      todos(".corazonActual").forEach(b => pintarCorazon(b, c.id));
+      todos(".corazonActual").forEach(b => pintarCorazon(b, c));
       $("desde").textContent = nombreCola;
       $("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
       document.title = c.titulo + " · Mi Música";

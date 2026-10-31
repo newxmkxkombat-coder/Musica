@@ -1072,16 +1072,35 @@
     // YouTube devuelve 20 vídeos y muchos son LA MISMA canción (oficial, con letra, en vivo...).
     // Dejamos solo la primera (la mejor) y quitamos las repetidas.
     const normalizar = (t = "") => String(t).toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
+    // ⚡ ¿Qué versión de YouTube arranca antes con la música?
+    // En modo música preferimos el "Audio oficial" o el canal "- Topic": empiezan DIRECTO
+    // con la canción (los videoclips a veces traen 20-30 s de intro) y cargan más rápido
+    // porque son una imagen quieta. Más puntos = mejor.
+    function puntosAudio(c) {
+      if (leer("verVideo", false)) return 0;   // con vídeo, nos da igual
+      let p = 0;
+      if (/\s-\sTopic$/i.test(c.canal)) p += 3;
+      if (/\b(audio|official audio|audio oficial)\b/i.test(c.titulo)) p += 2;
+      if (/\b(lyrics?|letra)\b/i.test(c.titulo)) p += 1;
+      if (/(video oficial|official (music )?video|videoclip)/i.test(c.titulo)) p -= 1;
+      if (/\b(en vivo|live|remix|cover|karaoke|8d|slowed|sped up|reverb|instrumental|ac[uú]stico)\b/i.test(c.titulo)) p -= 3;
+      return p;
+    }
     function resultadosComoSpotify(lista) {
       if (!lista.length) return lista;
-      const vistas = [];   // nombres de canciones que ya pusimos
-      return lista.filter(c => {
+      const grupos = [];   // una canción = un grupo (con todas sus versiones)
+      lista.forEach(c => {
         const titulo = normalizar(c.titulo);
-        if (vistas.some(nombre => titulo.includes(nombre))) return false;   // repetida
+        const grupo = grupos.find(g => titulo.includes(g.nombre));
+        if (grupo) {
+          // Otra versión de la misma canción: nos quedamos con la que arranca antes
+          if (puntosAudio(c) > puntosAudio(grupo.c)) grupo.c = c;
+          return;
+        }
         const nombre = normalizar(partesDelTitulo(c).cancion);
-        if (nombre.length >= 3) vistas.push(nombre);
-        return true;
+        grupos.push({ nombre: nombre.length >= 3 ? nombre : "\u0000" + grupos.length, c });
       });
+      return grupos.map(g => g.c);
     }
     // Canciones del mismo artista, sacadas de Apple Music. Todavía no sabemos su vídeo de
     // YouTube: lo buscamos solo si la tocas (así no gastamos la clave por gusto).
@@ -1101,11 +1120,29 @@
       }).slice(0, 10).map(c => ({ titulo: c.titulo, canal: c.artista, img: c.img, id: null }));
     }
     // Si una canción aún no tiene vídeo de YouTube, lo buscamos ahora (gasta 1 búsqueda)
+    // 🧠 Memoria PERMANENTE: "esta canción = este vídeo". Si ya la buscamos alguna vez,
+    // no volvemos a preguntar a YouTube: arranca antes y no gasta búsquedas de tu llave.
+    let videosConocidos = leer("videosConocidos", {});
+    const llaveVideo = (c) => (leer("verVideo", false) ? "v:" : "a:") + normalizar(c.canal) + "|" + normalizar(c.titulo);
+    function recordarVideo(c) {
+      videosConocidos[llaveVideo(c)] = c.id;
+      const llaves = Object.keys(videosConocidos);
+      if (llaves.length > 3000) llaves.slice(0, llaves.length - 3000).forEach(k => delete videosConocidos[k]);   // las más viejas fuera
+      guardar("videosConocidos", videosConocidos);
+    }
     async function conVideo(c) {
       if (c.id) return c;
+      const sabido = videosConocidos[llaveVideo(c)];
+      if (sabido) { c.id = sabido; return c; }
       const encontrados = await buscarEnYouTube(c.canal + " - " + c.titulo);
       if (!encontrados.length) throw new Error("No encontrada en YouTube");
-      c.id = encontrados[0].id;   // dejamos la portada bonita de Apple
+      // De los primeros resultados que SÍ son esa canción, el que arranca antes con la música
+      const nombre = normalizar(c.titulo.replace(/\(.*?\)/g, ""));
+      const candidatos = encontrados.slice(0, 6).filter(v => !nombre || normalizar(v.titulo).includes(nombre));
+      const mejor = (candidatos.length ? candidatos : encontrados)
+        .reduce((a, b) => puntosAudio(b) > puntosAudio(a) ? b : a);
+      c.id = mejor.id;   // dejamos la portada bonita de Apple/Deezer
+      recordarVideo(c);
       return c;
     }
 
@@ -1354,7 +1391,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "67 · 31 oct";
+    const VERSION = "68 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1984,13 +2021,18 @@
         }
       });
     }
+    let esperasBuscar = [];
     function precargarVecinas() {
-      // Si la SIGUIENTE aún no tiene vídeo (radio, ánimos...), lo buscamos ya para tenerla lista
-      const sig = cola[posicion + 1];
-      if (sig && !sig.id && !sig.buscando) {
+      // Si las SIGUIENTES aún no tienen vídeo (radio, ánimos...), lo buscamos ya para tenerlas listas:
+      // la siguiente al momento, y la 2ª y 3ª con un poco de calma (así no gastamos búsquedas
+      // si cambias de lista enseguida)
+      esperasBuscar.forEach(clearTimeout);
+      esperasBuscar = [1, 2, 3].map((k, i) => setTimeout(() => {
+        const sig = cola[posicion + k];
+        if (!sig || sig.id || sig.buscando) return;
         sig.buscando = true;
-        conVideo(sig).then(() => precargarVecinas()).catch(() => {}).finally(() => delete sig.buscando);
-      }
+        conVideo(sig).then(() => { if (k === 1) precargarVecinas(); }).catch(() => {}).finally(() => delete sig.buscando);
+      }, i * 8000));
       if (!todosListos()) return;
       const queremos = cancionesQueQueremos();
       esperasPrecarga.forEach(clearTimeout);

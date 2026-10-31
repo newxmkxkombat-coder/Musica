@@ -304,6 +304,7 @@
     #fondoMezcla .ajusteMezcla { padding: 4px 8px 10px; font-size: 13px; }
     #fondoMezcla .ajusteMezcla b { font-size: 15px; }
     .ajusteMezcla.apagado { opacity: .4; }
+    .pasosSensor { margin: 4px 0 18px 20px; display: grid; gap: 10px; font-size: 14px; line-height: 1.4; color: var(--texto); }
     .interruptorFila { justify-content: space-between; }
     .interruptor { width: 44px; height: 26px; border-radius: 13px; background: #ffffff33; position: relative; transition: background .2s; flex: none; }
     .interruptor::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
@@ -871,6 +872,21 @@
     </div>
   </div>
 
+  <!-- ===== AYUDA: PERMITIR EL SENSOR EN BRAVE ===== -->
+  <div class="fondoHoja" id="fondoSensor" hidden>
+    <div class="hoja">
+      <div class="agarre"></div>
+      <h3>Brave está bloqueando el sensor</h3>
+      <p class="canal" style="white-space:normal">Para que funcione "Sacudir para pausar" hay que darle permiso en Brave. Es rápido:</p>
+      <ol class="pasosSensor">
+        <li>Toca <b>Copiar y abrir Brave</b>.</li>
+        <li>En Brave, mantén apretada la barra de direcciones, toca <b>Pegar</b> y entra. Se abre directo el permiso de <b>Sensores de movimiento</b>: ponlo en <b>Permitido</b>.</li>
+        <li>Vuelve aquí y activa otra vez "Sacudir para pausar".</li>
+      </ol>
+      <button class="boton" id="btnAbrirBrave" style="width:100%;justify-content:center">Copiar y abrir Brave</button>
+    </div>
+  </div>
+
   <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
   <div class="fondoHoja" id="fondoHoja" hidden>
     <div class="hoja">
@@ -1333,7 +1349,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "63 · 31 oct";
+    const VERSION = "64 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2597,6 +2613,7 @@
       if (estado.capa !== "opciones") $("fondoOpciones").hidden = true;
       if (estado.capa !== "cola") $("fondoCola").hidden = true;
       if (estado.capa !== "mezcla") $("fondoMezcla").hidden = true;
+      if (estado.capa !== "sensor") $("fondoSensor").hidden = true;
       if (estado.capa !== "menuCancion") $("fondoMenuCancion").hidden = true;
       if (estado.capa !== "letra") $("letraGrande").hidden = true;
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
@@ -2801,14 +2818,28 @@
       }
     }
     window.addEventListener("devicemotion", alMoverse);
+    // Si Brave bloquea el sensor: una hoja con los pasos y un botón que copia la dirección
+    // EXACTA del permiso (brave://settings/content/sensors) y abre Brave.
+    // (Una página web no puede abrir la configuración de Brave ella sola: Brave no lo permite.)
+    function ayudaSensor() {
+      history.back();   // cerramos el menú ⋮
+      setTimeout(() => abrirCapa("fondoSensor", "sensor"), 60);
+    }
+    $("btnAbrirBrave").onclick = async () => {
+      try { await navigator.clipboard.writeText("brave://settings/content/sensors"); avisar("Dirección copiada: pégala en Brave"); }
+      catch { avisar("Escribe en Brave: brave://settings/content/sensors"); }
+      // Abre la app de Brave (en Android) con una pestaña normal
+      setTimeout(() => {
+        location.href = "intent://" + location.host + location.pathname + "#Intent;scheme=https;package=com.brave.browser;end";
+      }, 700);
+    };
     function pintarSacudir() {
       $("opSacudir").innerHTML = icono("sacudir") + "Sacudir para pausar: " + (sacudir ? "<b style='color:var(--verde)'>Sí</b>" : "No");
     }
     $("opSacudir").onclick = async () => {
       // En iPhone hay que pedir permiso para usar el sensor (en Android no hace falta)
       if (!sacudir && typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
-        try { if (await DeviceMotionEvent.requestPermission() !== "granted")
-          return avisar("Brave bloquea el sensor: actívalo en Configuración → Configuración de sitios → Sensores de movimiento", "Entendido", () => {}); } catch {}
+        try { if (await DeviceMotionEvent.requestPermission() !== "granted") return ayudaSensor(); } catch {}
       }
       sacudir = !sacudir;
       guardar("sacudir", sacudir);
@@ -3301,7 +3332,7 @@
         window.addEventListener("pointercancel", soltar);
       };
     }
-    ["fondoOpciones", "fondoCola", "fondoMezcla"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
+    ["fondoOpciones", "fondoCola", "fondoMezcla", "fondoSensor"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
     aplicarModoVideo();
 
     // ----- ¿Estás usando Brave? -----

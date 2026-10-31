@@ -1298,7 +1298,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "56 · 31 oct";
+    const VERSION = "57 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2776,8 +2776,13 @@
       const dura = reproductor?.getDuration?.() || 0;
       const de = (a, t) => `track_name=${encodeURIComponent(t)}&artist_name=${encodeURIComponent(a)}`;
       const soloNombre = `q=${encodeURIComponent(cancion)}`;
+      // Otras formas de escribir al artista: AL2 "El Aldeano" → El Aldeano, AL2 El Aldeano
+      const apodo = (c.canal.match(/["“”«]([^"“”»]+)["“”»]/) || artista.match(/["“”«]([^"“”»]+)["“”»]/) || [])[1];
+      const sinComillas = artista.replace(/["“”«»]/g, "").replace(/\s+/g, " ").trim();
+      const otrosNombres = [...new Set([apodo, sinComillas].filter(n => n && normalizar(n) !== normalizar(artista)))];
       // 1) LRCLIB con lo que sacamos del título de YouTube
-      let encontrada = await lrclib([de(artista, cancion), `q=${encodeURIComponent(artista + " " + cancion)}`, soloNombre], dura, i => i === soloNombre);
+      let encontrada = await lrclib([de(artista, cancion), ...otrosNombres.map(n => de(n, cancion)),
+        `q=${encodeURIComponent(artista + " " + cancion)}`, soloNombre], dura, i => i === soloNombre);
       if (encontrada?.syncedLyrics) return encontrada;
       // 2) Le pedimos a Deezer el nombre exacto y volvemos a probar en LRCLIB
       const exacto = await nombreExacto(artista, cancion);
@@ -2788,7 +2793,9 @@
       }
       if (encontrada) return encontrada;   // LRCLIB la tiene, aunque sin tiempos
       // 3) Segunda página: Lyrics.ovh (solo texto)
-      return (exacto && await lyricsOvh(exacto.artista, exacto.cancion)) || await lyricsOvh(artista, cancion) || "nada";
+      if (exacto) { const x = await lyricsOvh(exacto.artista, exacto.cancion); if (x) return x; }
+      for (const nombre of [artista, ...otrosNombres]) { const x = await lyricsOvh(nombre, cancion); if (x) return x; }
+      return "nada";
     }
 
     // Letra SIN tiempos → le calculamos tiempos aproximados.

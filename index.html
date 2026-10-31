@@ -298,6 +298,14 @@
       background: none; border: none; color: var(--texto); font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 8px;
     }
     .opcionCarpeta:hover { background: #ffffff0f; }
+    /* Barrita de los segundos de la mezcla */
+    .ajusteMezcla { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 0 8px 14px 48px; color: var(--gris); font-size: 12px; }
+    .ajusteMezcla[hidden] { display: none; }
+    .ajusteMezcla b { grid-column: 1 / -1; grid-row: 1; color: var(--texto); font-size: 13px; font-weight: 600; }
+    .ajusteMezcla input { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 2px; outline: none; margin: 10px 0;
+      background: linear-gradient(90deg, var(--verde) var(--lleno, 50%), #ffffff33 var(--lleno, 50%)); touch-action: none; }
+    .ajusteMezcla input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; }
+    .ajusteMezcla input::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; }
     .filaCola { padding: 6px 0 6px 8px; transition: transform .15s ease; }
     .filaCola .nombre { display: flex; flex-direction: column; }
     .filaCola .nombre .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -735,7 +743,7 @@
       <h3>Vista previa de la letra</h3>
       <div class="lineas" id="lineas"></div>
       <button class="boton" id="btnLetraCompleta">Mostrar letra</button>
-      <div class="creditoLetra">Letras de LRCLIB</div>
+      <div class="creditoLetra" id="creditoLetra">Letras de LRCLIB</div>
     </div>
     </div>
   </section>
@@ -774,6 +782,10 @@
       <button class="opcion" id="opCola"><svg class="ic"><use href="#i-cola"/></svg>Ver la cola</button>
       <button class="opcion" id="opVideo"></button>
       <button class="opcion" id="opMezclar"></button>
+      <div class="ajusteMezcla" id="ajusteMezcla">
+        <span>1 s</span><input type="range" id="barraMezcla" min="1" max="12" step="1"><span>12 s</span>
+        <b id="textoMezcla"></b>
+      </div>
       <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
     </div>
   </div>
@@ -981,7 +993,7 @@
     // ----- Resultados como Spotify -----
     // YouTube devuelve 20 vídeos y muchos son LA MISMA canción (oficial, con letra, en vivo...).
     // Dejamos solo la primera (la mejor) y quitamos las repetidas.
-    const normalizar = (t) => t.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
+    const normalizar = (t = "") => String(t).toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "");
     function resultadosComoSpotify(lista) {
       if (!lista.length) return lista;
       const vistas = [];   // nombres de canciones que ya pusimos
@@ -1264,7 +1276,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "54 · 31 oct";
+    const VERSION = "55 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2582,14 +2594,14 @@
     // Cuando a la canción le quedan 6 segundos, arrancamos la SIGUIENTE (que ya estaba
     // cargada en un reproductor de reserva) con volumen 0. Durante esos 6 segundos una
     // va bajando y la otra subiendo. Así no hay silencio entre canciones.
-    const SEGUNDOS_MEZCLA = 6;
+    let segundosMezcla = leer("segundosMezcla", 6);   // lo eliges tú con la barrita (1 a 12)
     let mezclar = leer("mezclar", false);
     let mezcla = null;   // { viejo, reloj } mientras está mezclando
 
     function quizasMezclar() {
       if (!mezclar || mezcla || repetir === "una" || !todosListos()) return;
       const dura = reproductor.getDuration(), va = reproductor.getCurrentTime();
-      if (dura < 30 || va < dura - SEGUNDOS_MEZCLA || reproductor.getPlayerState() !== YT.PlayerState.PLAYING) return;
+      if (dura < 30 || va < dura - segundosMezcla || reproductor.getPlayerState() !== YT.PlayerState.PLAYING) return;
       const i = posicion < cola.length - 1 ? posicion + 1 : (repetir === "todo" ? 0 : -1);
       const c = cola[i];
       const n = c?.id ? cargado.findIndex((id, k) => id === c.id && k !== activo) : -1;
@@ -2608,7 +2620,7 @@
       // Cada décima de segundo movemos un poquito los dos volúmenes
       const inicio = Date.now();
       mezcla = { viejo, reloj: setInterval(() => {
-        const avance = Math.min(1, (Date.now() - inicio) / (SEGUNDOS_MEZCLA * 1000));
+        const avance = Math.min(1, (Date.now() - inicio) / (segundosMezcla * 1000));
         viejo.setVolume(Math.round(volumen * (1 - avance)));
         reproductor.setVolume(Math.round(volumen * avance));
         if (avance >= 1) cancelarMezcla();
@@ -2630,6 +2642,11 @@
       $("btnMezclar").classList.toggle("activo", mezclar);
       $("btnMezclar").title = mezclar ? "Mezclar canciones: Sí" : "Mezclar canciones: No";
       $("opMezclar").innerHTML = icono("aleatorio") + "Mezclar canciones: " + (mezclar ? "<b style='color:var(--verde)'>Sí</b>" : "No");
+      // La barrita para elegir cuántos segundos dura la mezcla (solo si está encendida)
+      $("ajusteMezcla").hidden = !mezclar;
+      $("barraMezcla").value = segundosMezcla;
+      $("textoMezcla").textContent = "Duración de la mezcla: " + segundosMezcla + " segundos";
+      $("barraMezcla").style.setProperty("--lleno", ((segundosMezcla - 1) / 11 * 100) + "%");
     }
     $("btnMezclar").onclick = () => $("opMezclar").onclick();
     $("opMezclar").onclick = () => {
@@ -2637,6 +2654,11 @@
       guardar("mezclar", mezclar);
       pintarMezclar();
       avisar(mezclar ? "Las canciones se mezclarán" : "Mezcla desactivada");
+    };
+    $("barraMezcla").oninput = () => {
+      segundosMezcla = Number($("barraMezcla").value);
+      guardar("segundosMezcla", segundosMezcla);
+      pintarMezclar();
     };
     pintarMezclar();
 
@@ -2665,26 +2687,78 @@
     }
 
     // Pregunta a LRCLIB de varias formas, de la más exacta a la más suelta, hasta encontrarla
+    // Buscamos la letra en DOS páginas gratis:
+    //   1) LRCLIB: letras CON tiempos (se van pintando mientras suena). La mejor.
+    //   2) Lyrics.ovh: solo el texto, pero tiene muchas que LRCLIB no tiene.
+    // Y si el título de YouTube es raro, le preguntamos a Deezer el nombre EXACTO.
+    async function lrclib(intentos, dura, exigirDuracion) {
+      let sinTiempos = null;
+      for (const intento of intentos) {
+        try {
+          const r = await fetch("https://lrclib.net/api/search?" + intento);
+          if (!r.ok) continue;
+          let resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
+          // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
+          if (exigirDuracion(intento)) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
+          if (!resultados.length) continue;
+          // Preferimos letra con tiempos y que dure lo mismo que el vídeo
+          const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
+          const mejor = resultados.sort((a, b) => puntos(b) - puntos(a))[0];
+          if (mejor.syncedLyrics) return mejor;   // ¡con tiempos! no hace falta seguir
+          sinTiempos = sinTiempos || mejor;        // la guardamos por si no aparece otra mejor
+        } catch {}
+      }
+      return sinTiempos;
+    }
+    async function nombreExacto(artista, cancion) {
+      const t = (await deezer("search/track?q=" + encodeURIComponent(artista + " " + cancion) + "&limit=1"))?.data?.[0];
+      return t ? { artista: t.artist?.name || artista, cancion: t.title_short || t.title || cancion } : null;
+    }
+    async function lyricsOvh(artista, cancion) {
+      try {
+        const r = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artista)}/${encodeURIComponent(cancion)}`);
+        if (!r.ok) return null;
+        const texto = (await r.json()).lyrics;
+        return texto && texto.trim() ? { plainLyrics: texto.replace(/\r/g, ""), fuente: "Lyrics.ovh" } : null;
+      } catch { return null; }
+    }
     async function buscarLetra(c) {
       const { artista, cancion } = partesDelTitulo(c);
-      const intentos = [
-        `track_name=${encodeURIComponent(cancion)}&artist_name=${encodeURIComponent(artista)}`,
-        `q=${encodeURIComponent(artista + " " + cancion)}`,
-        `q=${encodeURIComponent(cancion)}`,    // a veces el "artista" era el nombre del canal
-      ];
       const dura = reproductor?.getDuration?.() || 0;
-      for (const intento of intentos) {
-        const r = await fetch("https://lrclib.net/api/search?" + intento);
-        if (!r.ok) continue;
-        let resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
-        // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
-        if (intento === intentos[2]) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
-        if (!resultados.length) continue;
-        // Preferimos letra con tiempos y que dure lo mismo que el vídeo
-        const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
-        return resultados.sort((a, b) => puntos(b) - puntos(a))[0];
+      const de = (a, t) => `track_name=${encodeURIComponent(t)}&artist_name=${encodeURIComponent(a)}`;
+      const soloNombre = `q=${encodeURIComponent(cancion)}`;
+      // 1) LRCLIB con lo que sacamos del título de YouTube
+      let encontrada = await lrclib([de(artista, cancion), `q=${encodeURIComponent(artista + " " + cancion)}`, soloNombre], dura, i => i === soloNombre);
+      if (encontrada?.syncedLyrics) return encontrada;
+      // 2) Le pedimos a Deezer el nombre exacto y volvemos a probar en LRCLIB
+      const exacto = await nombreExacto(artista, cancion);
+      if (exacto && normalizar(exacto.artista + exacto.cancion) !== normalizar(artista + cancion)) {
+        const otra = await lrclib([de(exacto.artista, exacto.cancion), `q=${encodeURIComponent(exacto.artista + " " + exacto.cancion)}`], dura, () => false);
+        if (otra?.syncedLyrics || (otra && !encontrada)) encontrada = otra;
+        if (encontrada?.syncedLyrics) return encontrada;
       }
-      return "nada";
+      if (encontrada) return encontrada;   // LRCLIB la tiene, aunque sin tiempos
+      // 3) Segunda página: Lyrics.ovh (solo texto)
+      return (exacto && await lyricsOvh(exacto.artista, exacto.cancion)) || await lyricsOvh(artista, cancion) || "nada";
+    }
+
+    // Letra SIN tiempos → le calculamos tiempos aproximados.
+    // Idea: la voz suele empezar un poco después del inicio y acabar antes del final.
+    // Repartimos ese rato entre las frases: las frases largas reciben más tiempo,
+    // y entre estrofas (línea vacía) dejamos una pausa.
+    function tiemposAproximados(texto, dura) {
+      const filas = texto.split("\n").map(l => l.trim());
+      const empieza = Math.min(20, Math.max(5, dura * 0.07));
+      const acaba = dura - Math.min(20, Math.max(5, dura * 0.06));
+      const peso = (l) => l ? 8 + l.length : 14;   // línea vacía = pausa entre estrofas
+      const total = filas.reduce((s, l) => s + peso(l), 0) || 1;
+      let acumulado = 0;
+      const lineas = [];
+      filas.forEach(l => {
+        if (l) lineas.push({ t: empieza + (acaba - empieza) * acumulado / total, texto: l });
+        acumulado += peso(l);
+      });
+      return lineas;
     }
 
     async function cargarLetra(c) {
@@ -2701,9 +2775,16 @@
       } catch { /* sin internet: simplemente no la mostramos */ }
     }
 
+    let letraAproximada = false;
     function pintarLetra(x) {
       letraConTiempos = !!x.syncedLyrics;
-      if (letraConTiempos) {
+      letraAproximada = false;
+      const dura = reproductor?.getDuration?.() || 0;
+      if (!letraConTiempos && x.plainLyrics && dura > 30) {
+        // Sin tiempos: los calculamos nosotros (aproximados)
+        letra = tiemposAproximados(x.plainLyrics, dura);
+        letraConTiempos = letraAproximada = letra.length > 0;
+      } else if (letraConTiempos) {
         letra = x.syncedLyrics.split("\n").map(l => {
           const m = l.match(/^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$/);
           return m && { t: Number(m[1]) * 60 + Number(m[2]), texto: m[3] || "♪" };
@@ -2725,6 +2806,7 @@
         if (letraConTiempos) p.onclick = () => { reproductor?.seekTo(l.t, true); seguirLetra(l.t, true); };
         grande.appendChild(p);
       });
+      $("creditoLetra").textContent = "Letras de " + (x.fuente || "LRCLIB") + (letraAproximada ? " · tiempos aproximados" : "");
       $("tarjetaLetra").classList.remove("completa");
       $("btnLetraCompleta").textContent = "Mostrar letra";
       $("tarjetaLetra").hidden = false;

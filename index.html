@@ -1052,7 +1052,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "37 · 31 oct";
+    const VERSION = "38 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1401,7 +1401,9 @@
                 if (todosListos() && posicion < 0) precargarAlAbrir();
               }
             },
-            onStateChange: (e) => alCambiarEstado(n, e.data)
+            onStateChange: (e) => alCambiarEstado(n, e.data),
+            // Si YouTube da error (por ejemplo, se cortó el internet), lo intentamos de nuevo
+            onError: () => { if (n === activo) reconectar(); }
           }
         });
     }
@@ -1784,7 +1786,39 @@
       ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
       seguirLetra(reproductor.getCurrentTime());
       quizasMezclar();
+      vigilarCortes();
     }, 500);
+
+    // =====================================================================
+    // 📶 SI SE VA EL INTERNET
+    // =====================================================================
+    // YouTube ya guarda un trozo de la canción por adelantado (el "búfer") y lo sigue
+    // tocando sin internet. Lo que hacemos nosotros:
+    //  1) Avisarte de que no hay internet (pero la música sigue con lo que ya cargó).
+    //  2) Cuando vuelve el internet, si la canción se quedó "pensando", la despertamos
+    //     en el MISMO segundo donde iba, para que siga cargando el resto.
+    let desdeCuandoCargando = 0;
+    function reconectar() {
+      if (posicion < 0 || !cola[posicion]?.id || !navigator.onLine) return;
+      const segundo = reproductor.getCurrentTime?.() || 0;
+      reproductor.loadVideoById(cola[posicion].id, segundo);   // sigue donde iba
+      desdeCuandoCargando = Date.now();
+    }
+    function vigilarCortes() {
+      const estado = reproductor.getPlayerState?.();
+      if (estado !== YT.PlayerState.BUFFERING) { desdeCuandoCargando = 0; return; }
+      if (!desdeCuandoCargando) desdeCuandoCargando = Date.now();
+      // Si lleva más de 8 segundos "pensando" y SÍ hay internet, la empujamos
+      if (Date.now() - desdeCuandoCargando > 8000 && navigator.onLine) reconectar();
+    }
+    window.addEventListener("offline", () => avisar("Sin internet: sigue sonando lo que ya cargó"));
+    window.addEventListener("online", () => {
+      avisar("Volvió el internet");
+      setTimeout(() => {
+        const estado = reproductor?.getPlayerState?.();
+        if (estado === YT.PlayerState.BUFFERING || estado === -1) reconectar();
+      }, 1500);
+    });
 
     // =====================================================================
     // 🎚️ MEZCLAR CANCIONES (fundido o "crossfade", como Spotify)

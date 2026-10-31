@@ -396,6 +396,8 @@
       display: flex; flex-direction: column; align-items: center; gap: 24px; scrollbar-width: none;
       padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
     }
+    /* Sin letra no hay nada más abajo: la pantalla queda FIJA (no se desliza) */
+    #pantalla:not(.conLetra) .desplazable { overflow-y: hidden; }
     .primeraParte { width: 100%; max-width: 440px; flex: none; display: flex; flex-direction: column;
       min-height: calc(100dvh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
     /* Si hay letra, el reproductor se encoge un poquito para que asome la tarjeta de la letra */
@@ -486,6 +488,18 @@
       color: var(--texto); font-size: 14px; font-weight: 700; padding: 10px 18px; border-radius: 999px;
     }
     #btnVideo .ic { width: 18px; height: 18px; }
+    .filaVideo { align-self: flex-start; display: flex; gap: 10px; }
+    #btnCompleta { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+                   background: #000000b3; backdrop-filter: blur(8px); color: var(--texto); }
+    #btnCompleta[hidden] { display: none; }
+    #btnCompleta .ic { width: 20px; height: 20px; }
+    /* El vídeo a pantalla completa: se ve ENTERO (sin recortar), con bandas negras si hace falta */
+    #salirCompleta { display: none; }
+    #video:fullscreen { inset: 0; width: 100vw; height: 100vh; background: #000; }
+    #video:fullscreen iframe { top: 0; left: 0; width: 100%; height: 100%; min-width: 0; aspect-ratio: auto; transform: none; }
+    #video:fullscreen #portada { display: none; }
+    #video:fullscreen #salirCompleta { display: grid; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
+                                       border-radius: 50%; background: #0009; color: #fff; }
     .nombreGrande { display: flex; align-items: center; gap: 12px; }
     .nombreGrande > img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; flex: none; background: #282828; }
     .nombreGrande > div { flex: 1; min-width: 0; }
@@ -645,6 +659,8 @@
     <symbol id="i-atras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
     <symbol id="i-abajo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></symbol>
     <symbol id="i-flechaAtras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m6-6-6 6 6 6"/></symbol>
+    <symbol id="i-completa" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+    <symbol id="i-sacudir" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8c-1 1.3-1 6.7 0 8M20 8c1 1.3 1 6.7 0 8"/></g></symbol>
     <symbol id="i-equis" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M7 7l10 10M17 7 7 17"/></symbol>
     <symbol id="i-rellenar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 18 6 6m0 9V6h9"/></symbol>
     <symbol id="i-mas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
@@ -736,7 +752,10 @@
       <button class="iconoBoton" id="btnOpciones" title="Más opciones"><svg class="ic"><use href="#i-puntos"/></svg></button>
     </div>
     <div class="grande">
-      <button id="btnVideo"></button>
+      <div class="filaVideo">
+        <button id="btnVideo"></button>
+        <button id="btnCompleta" title="Ver el vídeo en pantalla completa" hidden><svg class="ic"><use href="#i-completa"/></svg></button>
+      </div>
       <div class="nombreGrande">
         <img class="tapaActual" alt="">
         <div><div class="titulo nombreActual"></div><div class="canal artistaActual"></div></div>
@@ -776,6 +795,7 @@
     <!-- Tres reproductores: uno suena, otro guarda la anterior y otro carga la siguiente -->
     <!-- (los reproductores se crean desde el código: ver TOTAL_REPRODUCTORES) -->
     <img id="portada" alt="">
+    <button class="iconoBoton" id="salirCompleta" title="Salir de pantalla completa"><svg class="ic"><use href="#i-equis"/></svg></button>
   </div>
 
   <!-- ===== LETRA A PANTALLA COMPLETA ===== -->
@@ -808,6 +828,7 @@
         <span>1 s</span><input type="range" id="barraMezcla" min="1" max="12" step="1"><span>12 s</span>
         <b id="textoMezcla"></b>
       </div>
+      <button class="opcion" id="opSacudir"></button>
       <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
     </div>
   </div>
@@ -1312,7 +1333,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "61 · 31 oct";
+    const VERSION = "62 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2751,6 +2772,51 @@
     pintarMezclar();
 
     // =====================================================================
+    // 📳 SACUDIR EL MÓVIL PARA PAUSAR / SEGUIR
+    // =====================================================================
+    // El móvil tiene un "acelerómetro" que mide cómo se mueve. Si en menos de un
+    // segundo lo mueves rápido hacia un lado, al otro y otra vez (izquierda-derecha-izquierda),
+    // lo tomamos como una sacudida y hacemos play/pausa.
+    // Ojo: el navegador solo nos deja leerlo mientras la app está abierta en la pantalla.
+    let sacudir = leer("sacudir", false);
+    let golpes = [];          // momentos de los movimientos fuertes: { t, lado }
+    let ultimaSacudida = 0;
+    const FUERZA = 13;        // qué tan fuerte tiene que ser (m/s²). Más alto = más difícil
+    function alMoverse(e) {
+      if (!sacudir || document.hidden || posicion < 0) return;
+      const a = e.acceleration?.x ?? null;   // movimiento hacia los lados (sin contar la gravedad)
+      if (a === null || Math.abs(a) < FUERZA) return;
+      const ahora = Date.now();
+      const lado = Math.sign(a);
+      golpes = golpes.filter(g => ahora - g.t < 1000);           // solo el último segundo
+      if (golpes.length && golpes[golpes.length - 1].lado === lado) return;   // tiene que cambiar de lado
+      golpes.push({ t: ahora, lado });
+      if (golpes.length >= 3 && ahora - ultimaSacudida > 1500) {  // ida, vuelta, ida = ¡sacudida!
+        ultimaSacudida = ahora;
+        golpes = [];
+        if (navigator.vibrate) navigator.vibrate(60);
+        const sonaba = reproductor?.getPlayerState?.() === YT.PlayerState.PLAYING;
+        playPausa();
+        avisar(sonaba ? "⏸ Pausada (sacudiste el móvil)" : "▶ Sigue sonando");
+      }
+    }
+    window.addEventListener("devicemotion", alMoverse);
+    function pintarSacudir() {
+      $("opSacudir").innerHTML = icono("sacudir") + "Sacudir para pausar: " + (sacudir ? "<b style='color:var(--verde)'>Sí</b>" : "No");
+    }
+    $("opSacudir").onclick = async () => {
+      // En iPhone hay que pedir permiso para usar el sensor (en Android no hace falta)
+      if (!sacudir && typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
+        try { if (await DeviceMotionEvent.requestPermission() !== "granted") return avisar("Sin permiso para el sensor"); } catch {}
+      }
+      sacudir = !sacudir;
+      guardar("sacudir", sacudir);
+      pintarSacudir();
+      avisar(sacudir ? "Sacude el móvil de lado a lado para pausar o seguir" : "Sacudir para pausar: apagado");
+    };
+    pintarSacudir();
+
+    // =====================================================================
     // LA LETRA DE LA CANCIÓN (de LRCLIB, una página gratis de letras)
     // =====================================================================
     // Muchas letras vienen "con tiempos", así:  [00:12.50] Tratando de olvidarte
@@ -3036,7 +3102,22 @@
       $("video").classList.toggle("conVideo", ver);
       $("btnVideo").innerHTML = ver ? icono("nota") + "Cambiar a audio" : icono("video") + "Cambiar a vídeo";
       $("opVideo").innerHTML = $("btnVideo").innerHTML;
+      $("btnCompleta").hidden = !ver;   // el botón ⛶ solo tiene sentido con vídeo
     }
+    // ⛶ PANTALLA COMPLETA: ponemos el vídeo a toda la pantalla y giramos a horizontal
+    $("btnCompleta").onclick = async () => {
+      const v = $("video");
+      try {
+        await (v.requestFullscreen ? v.requestFullscreen() : v.webkitRequestFullscreen());
+        // Girar a horizontal (en Android funciona; si el móvil no deja, lo giras tú)
+        await screen.orientation?.lock?.("landscape").catch(() => {});
+      } catch { avisar("Tu móvil no dejó poner pantalla completa"); }
+    };
+    $("salirCompleta").onclick = () => { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); };
+    document.addEventListener("fullscreenchange", () => {
+      // Al salir, el móvil vuelve a girar como quiera
+      if (!document.fullscreenElement) try { screen.orientation?.unlock?.(); } catch {}
+    });
     function cambiarModoVideo() { guardar("verVideo", !leer("verVideo", false)); aplicarModoVideo(); }
     $("btnVideo").onclick = cambiarModoVideo;
 

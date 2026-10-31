@@ -676,6 +676,7 @@
       <button class="opcion" id="opGuardar"><svg class="ic"><use href="#i-mas"/></svg>Añadir a una carpeta</button>
       <button class="opcion" id="opCola"><svg class="ic"><use href="#i-cola"/></svg>Ver la cola</button>
       <button class="opcion" id="opVideo"></button>
+      <button class="opcion" id="opMezclar"></button>
       <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
     </div>
   </div>
@@ -1051,7 +1052,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "36 · 31 oct";
+    const VERSION = "37 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1496,6 +1497,7 @@
 
     function tocar(i) {
       if (!cola[i]) return;
+      cancelarMezcla();   // si estaba mezclando y tocas otra cosa, cortamos la mezcla
       posicion = i;
       const c = cola[i];
       // Canción de "más del artista" sin vídeo todavía: primero lo buscamos y luego suena
@@ -1531,7 +1533,11 @@
           reproductor.loadVideoById(c.id);
         }
       }
-      // Ponemos el nombre, artista y portada en el mini y en la pantalla grande
+      mostrarCancion(c);
+    }
+
+    // Pone el nombre, artista y portada en el mini y en la pantalla grande
+    function mostrarCancion(c) {
       $("mini").hidden = false;
       todos(".tapaActual").forEach(img => img.src = c.img);
       todos(".nombreActual").forEach(el => el.textContent = c.titulo);
@@ -1777,7 +1783,68 @@
       if (!reproductor?.getDuration || posicion < 0) return;
       ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
       seguirLetra(reproductor.getCurrentTime());
+      quizasMezclar();
     }, 500);
+
+    // =====================================================================
+    // 🎚️ MEZCLAR CANCIONES (fundido o "crossfade", como Spotify)
+    // =====================================================================
+    // Cuando a la canción le quedan 6 segundos, arrancamos la SIGUIENTE (que ya estaba
+    // cargada en un reproductor de reserva) con volumen 0. Durante esos 6 segundos una
+    // va bajando y la otra subiendo. Así no hay silencio entre canciones.
+    const SEGUNDOS_MEZCLA = 6;
+    let mezclar = leer("mezclar", false);
+    let mezcla = null;   // { viejo, reloj } mientras está mezclando
+
+    function quizasMezclar() {
+      if (!mezclar || mezcla || repetir === "una" || !todosListos()) return;
+      const dura = reproductor.getDuration(), va = reproductor.getCurrentTime();
+      if (dura < 30 || va < dura - SEGUNDOS_MEZCLA || reproductor.getPlayerState() !== YT.PlayerState.PLAYING) return;
+      const i = posicion < cola.length - 1 ? posicion + 1 : (repetir === "todo" ? 0 : -1);
+      const c = cola[i];
+      const n = c?.id ? cargado.findIndex((id, k) => id === c.id && k !== activo) : -1;
+      if (n < 0) return;   // la siguiente no está cargada todavía: se cambia de la forma normal
+      const viejo = jugadores[activo];
+      // Primero cambiamos cuál es el "activo" (si no, el de reserva se pausaría solo)
+      activo = n;
+      reproductor = jugadores[n];
+      jugadores.forEach((j, k) => j.getIframe().classList.toggle("dormido", k !== activo));
+      posicion = i;
+      reproductor.seekTo(0, true);
+      reproductor.setVolume(0);
+      reproductor.unMute();
+      reproductor.playVideo();
+      mostrarCancion(c);
+      // Cada décima de segundo movemos un poquito los dos volúmenes
+      const inicio = Date.now();
+      mezcla = { viejo, reloj: setInterval(() => {
+        const avance = Math.min(1, (Date.now() - inicio) / (SEGUNDOS_MEZCLA * 1000));
+        viejo.setVolume(Math.round(volumen * (1 - avance)));
+        reproductor.setVolume(Math.round(volumen * avance));
+        if (avance >= 1) cancelarMezcla();
+      }, 100) };
+    }
+    // Termina la mezcla: la canción vieja se pausa (queda lista por si tocas ⏮)
+    function cancelarMezcla() {
+      if (!mezcla) return;
+      clearInterval(mezcla.reloj);
+      mezcla.viejo.pauseVideo();
+      mezcla.viejo.mute();
+      mezcla.viejo.setVolume(volumen);
+      reproductor?.setVolume(volumen);
+      mezcla = null;
+    }
+
+    function pintarMezclar() {
+      $("opMezclar").innerHTML = icono("aleatorio") + "Mezclar canciones: " + (mezclar ? "<b style='color:var(--verde)'>Sí</b>" : "No");
+    }
+    $("opMezclar").onclick = () => {
+      mezclar = !mezclar;
+      guardar("mezclar", mezclar);
+      pintarMezclar();
+      avisar(mezclar ? "Las canciones se mezclarán" : "Mezcla desactivada");
+    };
+    pintarMezclar();
 
     // =====================================================================
     // LA LETRA DE LA CANCIÓN (de LRCLIB, una página gratis de letras)

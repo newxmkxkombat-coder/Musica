@@ -16,6 +16,10 @@
   <!-- Le decimos al navegador que vaya conectando con YouTube desde ya (carga más rápido) -->
   <link rel="preconnect" href="https://www.youtube.com">
   <link rel="preconnect" href="https://i.ytimg.com">
+  <!-- "Saludamos" antes a los servidores de YouTube para ganar tiempo al reproducir -->
+  <link rel="preconnect" href="https://www.googleapis.com">
+  <link rel="preconnect" href="https://www.google.com">
+  <link rel="dns-prefetch" href="https://googlevideo.com">
   <style>
     /* ===== COLORES Y MEDIDAS (variables): cámbialos aquí y cambia toda la app ===== */
     :root {
@@ -684,6 +688,7 @@
     // Para las recomendaciones: busca "artista - canción" y suena sin cambiar de pantalla
     async function tocarPorNombre(texto) {
       if (!leer("claveYT", "")) return mostrarBienvenida();
+      todos(".btnPlay").forEach(b => b.classList.add("cargando"));   // que se note al instante que ya va
       try {
         const lista = await buscarEnYouTube(texto);
         reproducirLista(lista, 0, "Recomendado para ti");
@@ -834,7 +839,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "23 · 31 oct";
+    const VERSION = "24 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1148,7 +1153,12 @@
     //  - Otro tiene cargada la canción ANTERIOR.
     // Al pulsar ⏭ o ⏮ solo cambiamos de reproductor: ¡suena al instante!
     function onYouTubeIframeAPIReady() {
-      [0, 1, 2].forEach(n => {
+      // Primero creamos SOLO el reproductor principal, para que no compita con los otros dos.
+      // Cuando ya está listo, creamos los dos de reserva.
+      crearJugador(activo);
+      reproductor = jugadores[activo];
+    }
+    function crearJugador(n) {
         jugadores[n] = new YT.Player("reproductorYT" + n, {
           width: "100%", height: "100%",
           // controls: 0 quita los botones de YouTube (usamos los nuestros)
@@ -1157,12 +1167,15 @@
             onReady: () => {
               jugadores[n].setVolume(volumen);
               jugadores[n].getIframe().classList.toggle("dormido", n !== activo);
+              if (n === activo) {
+                // Si tocaste una canción antes de que estuviera listo, ahora sí suena
+                if (cola[posicion] && !cargado[activo]) tocar(posicion);
+                [0, 1, 2].filter(k => k !== n).forEach(crearJugador);   // ahora los de reserva
+              } else precargarVecinas();
             },
             onStateChange: (e) => alCambiarEstado(n, e.data)
           }
         });
-      });
-      reproductor = jugadores[activo];
     }
     const todosListos = () => jugadores.length === 3 && jugadores.every(j => j?.loadVideoById);
 
@@ -1239,22 +1252,22 @@
       if (!cola[i]) return;
       posicion = i;
       const c = cola[i];
-      if (todosListos()) {
-        const listo = cargado.findIndex((id, n) => id === c.id && n !== activo);
+      if (reproductor?.loadVideoById) {
+        const listo = todosListos() ? cargado.findIndex((id, n) => id === c.id && n !== activo) : -1;
         if (listo >= 0) {
           // ¡Ya estaba cargada! Cambiamos a ese reproductor y suena al instante
           cambiarA(listo);
           reproductor.seekTo(0, true);
           reproductor.unMute(); reproductor.setVolume(volumen);
           reproductor.playVideo();
-          // Plan B: si a los 4 segundos ni siquiera empezó (el navegador no la dejó),
+          // Plan B: si a los 2,5 segundos ni siquiera empezó (el navegador no la dejó),
           // la cargamos de la forma normal. Si está "cargando", la dejamos tranquila.
           const este = reproductor;
           setTimeout(() => {
             const st = este.getPlayerState();
             if (este === reproductor && posicion === i && (st === -1 || st === YT.PlayerState.CUED))
               este.loadVideoById(c.id);
-          }, 4000);
+          }, 2500);
         } else {
           cargado[activo] = c.id;
           reproductor.unMute(); reproductor.setVolume(volumen);

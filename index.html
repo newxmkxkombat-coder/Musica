@@ -148,6 +148,17 @@
     .tarjetaRec { flex: 0 0 140px; scroll-snap-align: start; cursor: pointer; min-width: 0; }
     .tarjetaRec img { width: 140px; height: 140px; object-fit: cover; border-radius: 6px; background: var(--tarjeta); box-shadow: 0 8px 20px #0007; margin-bottom: 8px; }
     .tarjetaRec .titulo { font-size: 14px; }
+    /* Portadas de "Hecho para ti" (Mix diario / Descubrimiento semanal) */
+    .tapaMix { position: relative; width: 140px; height: 140px; border-radius: 6px; overflow: hidden; margin-bottom: 8px;
+               box-shadow: 0 8px 20px #0007; background: #333 center / cover no-repeat; }
+    .tapaMix::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, #0009); }
+    .tapaMix b { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 6px 8px; font-size: 15px; font-weight: 800;
+                 line-height: 1.1; border-bottom: 6px solid var(--colorMix, var(--verde)); }
+    .tapaMix.descubrir { background: linear-gradient(135deg, #2d46b9, #8bb8e8); display: grid; place-items: center; text-align: center; }
+    .tapaMix.descubrir::after { display: none; }
+    .tapaMix.descubrir b { position: static; border: none; font-size: 17px; }
+    .cabCarpeta .tapaMix { width: 150px; height: 150px; margin: 0; flex: none; }
+    .tarjetaRec .canal.dos { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .esqueleto { background: linear-gradient(90deg, #ffffff0d, #ffffff1a, #ffffff0d); background-size: 200% 100%; animation: brillo 1.2s infinite; }
     @keyframes brillo { to { background-position: -200% 0; } }
 
@@ -245,6 +256,10 @@
       box-shadow: 0 8px 24px #0008;
     }
     .tapa.nota { background: linear-gradient(135deg, #2ee86f, #0f5f2c); }
+    /* Mosaico de 4 portadas (2×2) */
+    .mosaico { display: grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0; overflow: hidden; padding: 0; background: #282828; }
+    .mosaico img { width: 100%; height: 100%; object-fit: cover; display: block; min-width: 0; min-height: 0; }
+    .opcionCarpeta .mini.mosaico { display: grid; }
     .tapa .ic { width: 44px; height: 44px; }
     .nuevaCarpeta { display: flex; gap: 8px; margin-bottom: 20px; max-width: 520px; }
     .nuevaCarpeta input, .bienvenida input {
@@ -257,6 +272,9 @@
     .cabCarpeta small { color: var(--gris); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
     .cabCarpeta h3 { font-size: 30px; font-weight: 800; letter-spacing: -.8px; line-height: 1.1; margin: 4px 0 6px; text-wrap: balance; }
     .acciones { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .iconoBoton.chispa { position: relative; color: var(--verde); }
+    .iconoBoton.chispa i { position: absolute; top: 2px; right: 0; font-style: normal; font-size: 12px; color: var(--verde); }
+    .recomendada { color: var(--verde); font-size: 12px; margin-right: 4px; }
     .botonPlayGrande {
       display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
       background: var(--verde); color: #000; box-shadow: 0 8px 24px #1ed76044;
@@ -280,6 +298,15 @@
       background: none; border: none; color: var(--texto); font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 8px;
     }
     .opcionCarpeta:hover { background: #ffffff0f; }
+    .filaCola { padding: 6px 0 6px 8px; transition: transform .15s ease; }
+    .filaCola .nombre { display: flex; flex-direction: column; }
+    .filaCola .nombre .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .filaCola .nombre small { color: var(--gris); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .filaCola .quitarCola { color: var(--gris); width: 36px; height: 36px; flex: none; }
+    .filaCola .quitarCola .ic { width: 16px; height: 16px; }
+    .filaCola .asa { width: 40px; height: 40px; display: grid; place-items: center; color: var(--gris); touch-action: none; cursor: grab; flex: none; }
+    .filaCola .asa .ic { width: 22px; height: 22px; }
+    .filaCola.moviendo { transition: none; background: #2a2a2e; border-radius: 8px; box-shadow: 0 6px 20px #000a; position: relative; z-index: 2; }
     .opcionCarpeta .mini { width: 44px; height: 44px; border-radius: 4px; flex: none; object-fit: cover;
                            background: linear-gradient(135deg, #5b3df5, #9fe0c4); display: grid; place-items: center; color: #fff; }
     .opcionCarpeta .mini.nota { background: linear-gradient(135deg, #2ee86f, #0f5f2c); }
@@ -1237,7 +1264,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "53 · 31 oct";
+    const VERSION = "54 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1279,6 +1306,9 @@
           id: c.id
         })));
       }
+
+      // ✨ Hecho para ti: Mix diarios + Descubrimiento semanal
+      seccionHechoParaTi();
 
       const pie = document.createElement("p");
       pie.className = "aviso version";
@@ -1444,6 +1474,9 @@
     // las demás, la portada de su primera canción o una nota musical
     function tapaDe(k, clase = "tapa") {
       if (k.id === "fav") return `<div class="${clase}">${icono("corazonLleno")}</div>`;
+      // Como Spotify: si la carpeta tiene 4 portadas distintas, hacemos un mosaico de 2×2
+      const fotos = [...new Set(k.canciones.map(c => c.img).filter(Boolean))].slice(0, 4);
+      if (fotos.length === 4) return `<div class="${clase} mosaico">${fotos.map(f => `<img src="${f}" alt="" loading="lazy">`).join("")}</div>`;
       return k.canciones.length
         ? `<img class="${clase}" src="${k.canciones[0].img}" alt="">`
         : `<div class="${clase} nota">${icono("nota")}</div>`;
@@ -1486,6 +1519,7 @@
         <div class="acciones">
           <button class="botonPlayGrande" title="Reproducir todo">${icono("play")}</button>
           <button class="iconoBoton" data-a="mezclar" title="Aleatorio">${icono("aleatorio")}</button>
+          <button class="iconoBoton chispa" data-a="inteligente" title="Mezcla inteligente">${icono("aleatorio")}<i>✦</i></button>
           <button class="iconoBoton" data-a="volver" title="Volver a la biblioteca">${icono("atras")}</button>
           ${k.canciones.length > 1 ? `<button class="botonOrdenar" data-a="ordenar">Ordenar</button>` : ""}
           ${k.id === "fav" ? "" : `<button class="iconoBoton borrar" data-a="borrar" title="Borrar carpeta">${icono("basura")}</button>`}
@@ -1496,6 +1530,7 @@
       cab.querySelector('[data-a="mezclar"]').onclick = () => {
         if (k.canciones.length) reproducirLista([...k.canciones].sort(() => Math.random() - 0.5), 0, k.nombre);
       };
+      cab.querySelector('[data-a="inteligente"]').onclick = () => mezclaInteligente(k);
       cab.querySelector('[data-a="volver"]').onclick = () => cambiarVista("biblioteca");
       const borrar = cab.querySelector('[data-a="borrar"]');
       if (borrar) borrar.onclick = () => {
@@ -1679,7 +1714,7 @@
       if (pintar && !desdeAtras && vista !== vistaActual) history.pushState({ vista }, "");
       vistaActual = vista;
       ponerColorDeFondo(null);   // cada pantalla empieza con su color normal
-      const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
+      const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista.startsWith("mix:") ? "inicio" : vista;
       todos(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
       $("formBuscar").hidden = vista !== "buscar";
       $("cuota").hidden = vista !== "buscar" || !leer("claveYT", "");
@@ -1690,6 +1725,7 @@
       if (vista === "inicio") mostrarInicio();
       else if (vista === "biblioteca") mostrarBiblioteca();
       else if (vista.startsWith("carpeta:")) mostrarCarpeta(vista.slice(8));
+      else if (vista.startsWith("mix:")) mostrarMix(vista.slice(4));
       else {   // Buscar
         if (!leer("claveYT", "")) return mostrarBienvenida();
         if (ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
@@ -2178,6 +2214,177 @@
         return true;
       }).sort(() => Math.random() - 0.5).slice(0, 10)
         .map(c => ({ titulo: c.titulo, canal: c.artista, img: c.img, id: null }));
+    }
+
+    // =====================================================================
+    // ✨ HECHO PARA TI (como Spotify): Mix diarios y Descubrimiento semanal
+    // =====================================================================
+    // Mix diario  = la radio de Deezer de uno de tus artistas favoritos + canciones TUYAS
+    //               de esos artistas. Cambia cada día.
+    // Descubrimiento semanal = canciones de artistas PARECIDOS a los tuyos que todavía
+    //               no escuchas. Cambia cada lunes.
+    const COLORES_MIX = ["#1ed760", "#e8115b", "#2d9cdb", "#f59b23", "#af2896"];
+    const hoyTexto = () => new Date().toDateString();
+    function lunesTexto() {
+      const d = new Date(); d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // retrocedemos hasta el lunes
+      return d.toDateString();
+    }
+    // Tus artistas, del más escuchado al menos
+    function tusArtistas() {
+      const cuenta = {};
+      [...historial, ...carpetas.flatMap(k => k.canciones)].forEach(c => {
+        const a = partesDelTitulo(c).artista || limpiarArtista(c.canal);
+        if (a) cuenta[a] = (cuenta[a] || 0) + 1;
+      });
+      return Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]);
+    }
+    let hechoParaTi = leer("hechoParaTi", {});
+    let armandoHecho = null;
+
+    async function armarMixes() {
+      let favoritos = tusArtistas().slice(0, 3);
+      if (!favoritos.length) favoritos = ["Bad Bunny", "Karol G", "Feid"];
+      const tuyas = carpetas.flatMap(k => k.canciones).concat(historial).filter(c => c.id);
+      const mixes = [];
+      for (const [i, artista] of favoritos.entries()) {
+        const encontrado = (await deezer("search/artist?q=" + encodeURIComponent(artista) + "&limit=1"))?.data?.[0];
+        if (!encontrado) continue;
+        const deLaRadio = (await deezer(`artist/${encontrado.id}/radio?limit=40`))?.data || [];
+        const nuevas = deLaRadio.map(deDeezer);
+        const nombres = [...new Set([encontrado.name, ...nuevas.map(c => c.canal)])];
+        // Tuyas de esos mismos artistas (estas ya tienen vídeo: suenan sin gastar búsquedas)
+        const vistas = new Set();
+        const mias = barajar(tuyas.filter(c => nombres.some(n => normalizar(c.canal + " " + c.titulo).includes(normalizar(n)))))
+          .filter(c => { const k = normalizar(c.titulo); if (vistas.has(k)) return false; vistas.add(k); return true; }).slice(0, 12);
+        // Mezclamos: 1 tuya cada 3 nuevas
+        const canciones = [];
+        const pila = barajar(nuevas);
+        while (pila.length || mias.length) {
+          if (mias.length && (canciones.length % 4 === 0 || !pila.length)) canciones.push({ ...mias.shift() });
+          else if (pila.length) canciones.push(pila.shift());
+        }
+        if (!canciones.length) continue;
+        mixes.push({
+          id: "mix" + (i + 1), nombre: "Mix diario " + (i + 1), color: COLORES_MIX[i],
+          foto: encontrado.picture_big || encontrado.picture_medium || canciones[0].img,
+          descripcion: nombres.slice(0, 3).join(", ") + " y más",
+          canciones: canciones.slice(0, 40)
+        });
+      }
+      return mixes;
+    }
+    async function armarDescubrimiento() {
+      const conocidos = new Set(tusArtistas().map(normalizar));
+      let semillas = tusArtistas().slice(0, 5);
+      if (!semillas.length) semillas = ["Bad Bunny", "Karol G", "Feid", "Peso Pluma", "Shakira"];
+      const parecidos = [];
+      for (const artista of semillas) {
+        const encontrado = (await deezer("search/artist?q=" + encodeURIComponent(artista) + "&limit=1"))?.data?.[0];
+        if (!encontrado) continue;
+        const rel = (await deezer(`artist/${encontrado.id}/related?limit=15`))?.data || [];
+        rel.forEach(a => { if (!conocidos.has(normalizar(a.name)) && !parecidos.some(p => p.id === a.id)) parecidos.push(a); });
+      }
+      const elegidos = barajar(parecidos).slice(0, 15);   // 15 artistas nuevos para ti
+      const sus = await Promise.all(elegidos.map(a => deezer(`artist/${a.id}/top?limit=8`)));
+      // 2 canciones de cada uno = 30 canciones
+      const canciones = barajar(sus.flatMap(d => barajar(d?.data || []).slice(0, 2)).map(deDeezer));
+      return canciones.length ? {
+        id: "descubrir", nombre: "Descubrimiento semanal", descubrir: true,
+        descripcion: "Música nueva para ti. Cambia cada lunes.", canciones
+      } : null;
+    }
+    // Arma lo que falte (los mixes una vez al día, el descubrimiento una vez por semana)
+    function prepararHechoParaTi() {
+      if (armandoHecho) return armandoHecho;
+      armandoHecho = (async () => {
+        if (hechoParaTi.dia !== hoyTexto() || !hechoParaTi.mixes?.length) {
+          const mixes = await armarMixes();
+          if (mixes.length) { hechoParaTi.mixes = mixes; hechoParaTi.dia = hoyTexto(); }
+        }
+        if (hechoParaTi.semana !== lunesTexto() || !hechoParaTi.descubrir) {
+          const d = await armarDescubrimiento();
+          if (d) { hechoParaTi.descubrir = d; hechoParaTi.semana = lunesTexto(); }
+        }
+        guardar("hechoParaTi", hechoParaTi);
+      })().finally(() => { armandoHecho = null; });
+      return armandoHecho;
+    }
+    const listasHechas = () => [...(hechoParaTi.mixes || []), ...(hechoParaTi.descubrir ? [hechoParaTi.descubrir] : [])];
+    const buscarLista = (id) => listasHechas().find(x => x.id === id);
+    function tapaDeMix(m) {
+      if (m.descubrir) return `<div class="tapaMix descubrir"><b>Descubrimiento semanal</b></div>`;
+      return `<div class="tapaMix" style="background-image:url('${encodeURI(m.foto || "")}');--colorMix:${m.color}"><b>${m.nombre}</b></div>`;
+    }
+    function seccionHechoParaTi() {
+      const listo = hechoParaTi.dia === hoyTexto() && hechoParaTi.semana === lunesTexto() && listasHechas().length;
+      const s = document.createElement("div");
+      s.className = "seccion";
+      s.innerHTML = '<h3>Hecho para ti</h3><div class="fila"></div>';
+      const fila = s.querySelector(".fila");
+      const pintar = () => {
+        fila.innerHTML = "";
+        listasHechas().forEach(m => {
+          const t = document.createElement("div");
+          t.className = "tarjetaRec";
+          t.innerHTML = tapaDeMix(m) + '<div class="canal dos"></div>';
+          t.querySelector(".canal").textContent = m.descripcion;
+          t.onclick = () => cambiarVista("mix:" + m.id);
+          fila.appendChild(t);
+        });
+      };
+      if (listasHechas().length) pintar();
+      else fila.innerHTML = '<div class="tarjetaRec"><img class="esqueleto" alt=""></div>'.repeat(4);
+      const recientes = $("lista").querySelector(".seccion");
+      $("lista").insertBefore(s, recientes || null);   // arriba de todo, después de los accesos
+      if (!listo) prepararHechoParaTi().then(() => { if (vistaActual === "inicio" && s.isConnected) { pintar(); if (!listasHechas().length) s.remove(); } });
+    }
+    // La página de un mix: portada, nombre, ▶ y sus canciones
+    function mostrarMix(id) {
+      const m = buscarLista(id);
+      if (!m) return cambiarVista("inicio");
+      const cab = document.createElement("div");
+      cab.innerHTML = `
+        <div class="cabCarpeta">${tapaDeMix(m)}
+          <div style="min-width:0"><small>Hecho para ti</small><h3></h3><div class="canal"></div></div>
+        </div>
+        <div class="acciones">
+          <button class="botonPlayGrande" title="Reproducir">${icono("play")}</button>
+          <button class="iconoBoton" data-a="mezclar" title="Aleatorio">${icono("aleatorio")}</button>
+        </div>`;
+      cab.querySelector("h3").textContent = m.nombre;
+      cab.querySelector(".canal").textContent = m.descripcion + " · " + cuantas(m.canciones.length);
+      cab.querySelector(".botonPlayGrande").onclick = () => reproducirLista(m.canciones.map(c => ({ ...c })), 0, m.nombre);
+      cab.querySelector('[data-a="mezclar"]').onclick = () => reproducirLista(barajar(m.canciones).map(c => ({ ...c })), 0, m.nombre);
+      pintarLista(m.nombre, m.canciones, cab);
+      $("tituloLista").textContent = "";
+      ponerColorDeFondo(m.descubrir ? "rgb(45, 70, 185)" : m.color);
+    }
+
+    // =====================================================================
+    // ✦ MEZCLA INTELIGENTE (como Spotify): tus canciones en desorden y, cada
+    //   3 canciones, una RECOMENDADA parecida (sale con ✦ en la cola)
+    // =====================================================================
+    async function mezclaInteligente(k) {
+      if (!k.canciones.length) return;
+      avisar("Armando tu mezcla inteligente…");
+      const cuenta = {};
+      k.canciones.forEach(c => { const a = partesDelTitulo(c).artista; if (a) cuenta[a] = (cuenta[a] || 0) + 1; });
+      const artistas = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]).slice(0, 3);
+      const radios = await Promise.all(artistas.map(a => cancionesDeRadio(a).catch(() => null)));
+      const yaTienes = new Set(k.canciones.map(llaveCancion));
+      const vistas = new Set();
+      const recomendadas = barajar(radios.flatMap(r => r?.lista || []))
+        .filter(c => { const n = llaveCancion(c); if (!n || yaTienes.has(n) || vistas.has(n)) return false; vistas.add(n); return true; })
+        .map(c => ({ ...c, recomendada: true }));
+      const tuyas = barajar(k.canciones).map(c => ({ ...c }));
+      const lista = [];
+      tuyas.forEach((c, i) => {
+        lista.push(c);
+        if (i % 3 === 2 && recomendadas.length) lista.push(recomendadas.shift());
+      });
+      if (!recomendadas.length && lista.length === tuyas.length) avisar("Sin recomendaciones ahora: suena en aleatorio");
+      reproducirLista(lista, 0, k.nombre + " ✦ Mezcla inteligente");
     }
 
     // ----- ⋮ DE CADA CANCIÓN: reproducir a continuación / al final / carpeta -----
@@ -2740,21 +2947,78 @@
     $("opVideo").onclick = () => desdeOpciones(cambiarModoVideo);
     $("opYouTube").onclick = () => desdeOpciones(() => { pausarYo(); window.open("https://www.youtube.com/watch?v=" + cola[posicion].id); });
     $("btnCola").onclick = abrirCola;
+    // ----- ≡ COLA: tocar para que suene, arrastrar ≡ para cambiar el orden, ✕ para quitar -----
     function abrirCola() {
+      pintarCola();
+      abrirCapa("fondoCola", "cola");
+    }
+    function pintarCola() {
       $("desdeCola").textContent = "A continuación: " + nombreCola;
       const caja = $("listaCola");
       caja.innerHTML = "";
       cola.slice(posicion + 1).forEach((c, k) => {
         const fila = document.createElement("div");
-        fila.className = "opcionCarpeta";
-        fila.innerHTML = `<img class="mini" alt=""><span class="nombre"></span>`;
+        fila.className = "opcionCarpeta filaCola";
+        fila.innerHTML = `<img class="mini" alt=""><span class="nombre"><span class="t"></span><small></small></span>
+          <button class="iconoBoton quitarCola" title="Quitar de la cola">${icono("equis")}</button>
+          <span class="asa" title="Arrastra para mover">${icono("cola")}</span>`;
         fila.querySelector("img").src = c.img;
-        fila.querySelector(".nombre").textContent = c.titulo;
+        fila.querySelector(".t").textContent = c.titulo;
+        fila.querySelector("small").textContent = c.canal;
+        if (c.recomendada) fila.querySelector("small").insertAdjacentHTML("afterbegin", '<span class="recomendada">✦ Recomendada</span>');
         fila.onclick = () => { history.back(); tocar(posicion + 1 + k); };
+        fila.querySelector(".quitarCola").onclick = (e) => {
+          e.stopPropagation();
+          cola = [...cola];                       // copia: no tocamos tu carpeta
+          cola.splice(posicion + 1 + k, 1);
+          pintarCola();
+          precargarVecinas();
+        };
+        arrastrarEnCola(fila, k);
         caja.appendChild(fila);
       });
       if (!caja.children.length) caja.innerHTML = '<p class="canal">No hay más canciones en la cola.</p>';
-      abrirCapa("fondoCola", "cola");
+    }
+    // Arrastrar con el dedo desde ≡: la fila sigue al dedo y, al soltar, cambiamos el orden
+    function arrastrarEnCola(fila, desde) {
+      const asa = fila.querySelector(".asa");
+      asa.onclick = (e) => e.stopPropagation();
+      asa.onpointerdown = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const filas = [...$("listaCola").children];
+        const alto = fila.offsetHeight;
+        const y0 = e.clientY;
+        let hasta = desde;
+        fila.classList.add("moviendo");
+        const mover = (ev) => {
+          const dy = ev.clientY - y0;
+          fila.style.transform = `translateY(${dy}px)`;
+          hasta = Math.max(0, Math.min(filas.length - 1, desde + Math.round(dy / alto)));
+          // Las demás filas se apartan para hacerle hueco
+          filas.forEach((f, i) => {
+            if (f === fila) return;
+            let mueve = 0;
+            if (desde < hasta && i > desde && i <= hasta) mueve = -alto;
+            if (desde > hasta && i < desde && i >= hasta) mueve = alto;
+            f.style.transform = mueve ? `translateY(${mueve}px)` : "";
+          });
+        };
+        const soltar = () => {
+          window.removeEventListener("pointermove", mover);
+          window.removeEventListener("pointerup", soltar);
+          window.removeEventListener("pointercancel", soltar);
+          if (hasta !== desde) {
+            cola = [...cola];
+            const [c] = cola.splice(posicion + 1 + desde, 1);
+            cola.splice(posicion + 1 + hasta, 0, c);
+            precargarVecinas();
+          }
+          pintarCola();
+        };
+        window.addEventListener("pointermove", mover);
+        window.addEventListener("pointerup", soltar);
+        window.addEventListener("pointercancel", soltar);
+      };
     }
     ["fondoOpciones", "fondoCola"].forEach(id => $(id).onclick = (e) => { if (e.target.id === id) history.back(); });
     aplicarModoVideo();

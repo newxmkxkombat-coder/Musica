@@ -489,6 +489,18 @@
     .nombreGrande > img { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; flex: none; background: #282828; }
     .nombreGrande > div { flex: 1; min-width: 0; }
     .nombreGrande .titulo { font-size: 22px; font-weight: 800; }
+    /* Título que se desliza cuando es muy largo */
+    .nombreActual { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .nombreActual .corre { display: inline-block; }
+    .nombreActual.desliza { text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent);
+                             mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent); }
+    .nombreActual.desliza .corre { animation: deslizar 10s ease-in-out infinite; }
+    @keyframes deslizar {
+      0%, 20% { transform: translateX(0); }               /* espera al principio */
+      60%, 75% { transform: translateX(var(--distancia)); } /* llega al final y espera */
+      100% { transform: translateX(0); }                  /* vuelve al principio */
+    }
+    @media (prefers-reduced-motion: reduce) { .nombreActual.desliza .corre { animation: none; } }
     .nombreGrande .canal { font-size: 16px; color: #ffffffb3; }
     /* El botón de guardar: ⊕ si no está guardada, ✓ verde si ya está (como Spotify) */
     .guardado { width: 40px; height: 40px; display: grid; place-items: center; background: none; border: none; cursor: pointer; color: #fff; flex: none; }
@@ -1298,7 +1310,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "57 · 31 oct";
+    const VERSION = "58 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2002,7 +2014,7 @@
       // Canción de "más del artista" sin vídeo todavía: primero lo buscamos y luego suena
       if (!c.id) {
         $("mini").hidden = false;
-        todos(".nombreActual").forEach(el => el.textContent = c.titulo);
+        ponerTitulo(c.titulo);
         todos(".artistaActual").forEach(el => el.textContent = c.canal);
         todos(".tapaActual").forEach(img => img.src = c.img);
         todos(".btnPlay").forEach(b => b.classList.add("cargando"));
@@ -2040,7 +2052,7 @@
     function mostrarCancion(c) {
       $("mini").hidden = false;
       todos(".tapaActual").forEach(img => img.src = c.img);
-      todos(".nombreActual").forEach(el => el.textContent = c.titulo);
+      ponerTitulo(c.titulo);
       todos(".artistaActual").forEach(el => el.textContent = c.canal);
       todos(".corazonActual").forEach(b => pintarCorazon(b, c));
       $("desde").textContent = nombreCola;
@@ -2484,9 +2496,34 @@
     todos(".corazonActual").forEach(b => b.onclick = (e) => { e.stopPropagation(); if (posicion >= 0) abrirHoja(cola[posicion]); });
 
     // Abrir y cerrar la pantalla grande
+    // ↔️ TÍTULO QUE SE DESLIZA (como Spotify): si el nombre no cabe, se va moviendo
+    // despacito hacia la izquierda hasta verse completo, espera, y vuelve.
+    function ponerTitulo(texto) {
+      todos(".nombreActual").forEach(el => {
+        el.innerHTML = '<span class="corre"></span>';
+        el.firstChild.textContent = texto;
+      });
+      deslizarTitulos();
+    }
+    function deslizarTitulos() {
+      requestAnimationFrame(() => todos("#mini .nombreActual, .nombreGrande .nombreActual, #letraGrande .nombreActual").forEach(el => {
+        const corre = el.querySelector(".corre");
+        if (!corre || !el.clientWidth) return;   // escondido: lo medimos cuando se vea
+        const sobra = corre.scrollWidth - el.clientWidth;
+        el.classList.toggle("desliza", sobra > 2);
+        if (sobra > 2) {
+          corre.style.setProperty("--distancia", -(sobra + 16) + "px");
+          // Más largo = más tiempo, para que siempre vaya a la misma velocidad (unos 50 px por segundo)
+          corre.style.animationDuration = Math.max(6, (sobra + 16) / 20) + "s";
+        }
+      }));
+    }
+    window.addEventListener("resize", deslizarTitulos);
+
     function abrirPantalla() {
       if ($("pantalla").classList.contains("abierta")) return;
       $("pantalla").classList.add("abierta");
+      setTimeout(deslizarTitulos, 60); setTimeout(deslizarTitulos, 450);   // ya se ve: ahora sí lo medimos
       $("desplazable").scrollTop = 0;   // siempre empieza arriba, en el reproductor
       history.pushState({ vista: vistaActual, capa: "pantalla" }, "");
     }
@@ -2904,6 +2941,7 @@
       $("letraGrande").hidden = false;
       history.pushState({ vista: vistaActual, capa: "letra" }, "");
       tocandoLetra = 0;
+      deslizarTitulos();
       requestAnimationFrame(() => seguirLetra(reproductor?.getCurrentTime?.() || 0, true));
     };
     $("cerrarLetra").onclick = () => history.back();

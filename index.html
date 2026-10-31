@@ -54,6 +54,45 @@
     .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px; text-align: left; }
     .linkClave:hover { color: var(--texto); }
     .linkClave[hidden] { display: none; }
+    /* ----- Botones: sin el marco azul y con animación al pulsar ----- */
+    button, a, .cancion, .carpeta, .sug { -webkit-tap-highlight-color: transparent; }  /* quita el azul del móvil */
+    button:focus { outline: none; }
+    button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }    /* solo con teclado */
+    button { transition: transform .12s ease, filter .12s ease; }
+    button:active { transform: scale(.88); filter: brightness(1.2); }               /* se "hunde" un poquito */
+    .cancion, .carpeta { transition: transform .12s ease; }
+    .cancion:active, .carpeta:active { transform: scale(.98); }
+    @keyframes latido { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+    .latido { animation: latido .25s ease; }                                       /* el play late al cambiar */
+    @media (prefers-reduced-motion: reduce) { button, .cancion, .carpeta { transition: none; } .latido { animation: none; } }
+
+    /* ----- Biblioteca: carpetas ----- */
+    .carpetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .carpeta { background: var(--panel); border-radius: 8px; padding: 12px; cursor: pointer; min-width: 0; }
+    .carpeta:hover { background: var(--tarjeta); }
+    .carpeta .tapa { width: 100%; aspect-ratio: 1; border-radius: 6px; margin-bottom: 8px; object-fit: cover;
+                     background: linear-gradient(135deg, #2ee86f, #0f7a35); display: grid; place-items: center; font-size: 40px; }
+    .carpeta .titulo { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .carpeta .canal { color: var(--gris); font-size: 12px; }
+    .nuevaCarpeta { display: flex; gap: 8px; margin-bottom: 16px; max-width: 480px; }
+    .nuevaCarpeta input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: none; background: var(--tarjeta); color: var(--texto); }
+    .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .botonRedondo { width: 52px; height: 52px; border-radius: 50%; font-size: 22px; padding: 0; }
+
+    /* ----- Hoja "Guardar en carpeta" (sale desde abajo) ----- */
+    .fondoHoja { position: fixed; inset: 0; background: #000a; z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+    .fondoHoja[hidden] { display: none; }
+    .hoja { background: #282828; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; padding: 16px;
+            max-height: 75vh; overflow-y: auto; }
+    .hoja h3 { margin-bottom: 4px; }
+    .hoja .canal { color: var(--gris); font-size: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .opcionCarpeta { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 8px;
+                     background: none; border: none; color: var(--texto); font-size: 15px; cursor: pointer; border-radius: 6px; }
+    .opcionCarpeta:hover { background: #3e3e3e; }
+    .opcionCarpeta .marca { color: var(--verde); font-size: 18px; }
+    .hoja .nuevaCarpeta { margin: 12px 0 8px; }
+    .hoja input { background: #3e3e3e !important; }
+
     /* Aviso "Ábrela en Brave" (solo sale si NO estás en Brave) */
     .avisoBrave { background: #fb542b; color: #fff; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
                   display: flex; flex-wrap: wrap; gap: 10px; align-items: center; line-height: 1.4; }
@@ -147,6 +186,7 @@
     #btnVideo { position: absolute; right: 8px; bottom: 8px; z-index: 2; border: none; cursor: pointer;
                 background: #000c; color: var(--texto); font-size: 12px; font-weight: 700;
                 padding: 6px 10px; border-radius: 999px; }
+    #video iframe.dormido { opacity: 0; pointer-events: none; }   /* el reproductor que precarga */
     #video iframe { position: absolute; top: 0; left: 50%; width: 356px; height: 200px; transform: translateX(-50%); }
 
     /* Móvil: la barra lateral pasa arriba */
@@ -168,12 +208,14 @@
   <aside>
     <h1><img src="iconos/logo.svg" alt="" class="logo"> Mi <span>Música</span></h1>
     <button class="menu activo" data-vista="buscar">🔍 Buscar</button>
-    <button class="menu" data-vista="favoritos">💚 Favoritos</button>
+    <button class="menu" data-vista="biblioteca">📚 Tu biblioteca</button>
     <!-- Aquí aparece el vídeo cuando suena algo (YouTube exige que se vea) -->
     <div class="sonandoAhora" id="sonandoAhora">
       <p>Sonando ahora</p>
       <div id="video">
-        <div id="reproductorYT"></div>
+        <!-- Dos reproductores: uno suena y el otro va cargando la siguiente canción -->
+        <div id="reproductorYT0"></div>
+        <div id="reproductorYT1"></div>
         <img id="portada" alt="">
         <button id="btnVideo">🎬 Ver vídeo</button>
       </div>
@@ -195,6 +237,20 @@
     <h2 id="tituloLista">Buscar</h2>
     <div id="lista"></div>
   </main>
+
+  <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
+  <div class="fondoHoja" id="fondoHoja" hidden>
+    <div class="hoja">
+      <h3>Guardar en carpeta</h3>
+      <div class="canal" id="hojaCancion"></div>
+      <div id="hojaCarpetas"></div>
+      <form class="nuevaCarpeta" id="hojaNueva">
+        <input id="hojaNombre" placeholder="Nueva carpeta (ej: Para el gym)" autocomplete="off">
+        <button class="boton">Crear</button>
+      </form>
+      <button class="boton gris" id="hojaListo" style="width:100%">Listo</button>
+    </div>
+  </div>
 
   <!-- ===== REPRODUCTOR ===== -->
   <footer>
@@ -232,10 +288,17 @@
       try { localStorage.setItem(nombre, JSON.stringify(valor)); } catch {}
     }
 
-    let favoritos = leer("favoritos", []);   // lista de canciones favoritas
+    // Carpetas: cada una tiene un nombre y su lista de canciones.
+    // La primera vez, tus favoritos de antes pasan a la carpeta "Favoritos".
+    let carpetas = leer("carpetas", null) ||
+      [{ id: "fav", nombre: "Favoritos", canciones: leer("favoritos", []) }];
     let cola = [];                           // canciones que se están mostrando
     let posicion = -1;                       // cuál de la cola está sonando
-    let reproductor = null;                  // el reproductor de YouTube
+    let reproductor = null;                  // el reproductor que está sonando ahora
+    let jugadores = [];                      // los dos reproductores de YouTube
+    let activo = 0;                          // cuál de los dos suena (0 o 1)
+    let precarga = { id: null };             // qué canción está cargando el otro
+    let volumen = 80;
 
     // =====================================================================
     // 2) LA CLAVE DE YOUTUBE (para poder buscar)
@@ -317,7 +380,8 @@
           canal: decodificar(v.snippet.channelTitle),
           img: v.snippet.thumbnails.medium.url
         }));
-        pintarLista('Resultados para "' + texto + '"', cola);
+        ultimaLista = { titulo: 'Resultados para "' + texto + '"', canciones: cola };
+        pintarLista(ultimaLista.titulo, cola);
         if (tocarPrimera) tocar(0);
       } catch (e) {
         // Si falla (por ejemplo, clave mala), damos la opción de cambiarla
@@ -433,89 +497,262 @@
     // =====================================================================
     // 4) PINTAR la lista de canciones en la pantalla
     // =====================================================================
-    function esFavorita(id) { return favoritos.some(f => f.id === id); }
+    function guardarCarpetas() { guardar("carpetas", carpetas); }
+    function estaGuardada(id) { return carpetas.some(k => k.canciones.some(c => c.id === id)); }
 
-    function pintarLista(titulo, canciones) {
+    // cabecera = algo que se pone encima de la lista (botones de la carpeta)
+    function pintarLista(titulo, canciones, cabecera = null) {
       document.getElementById("tituloLista").textContent = titulo;
       const lista = document.getElementById("lista");
       lista.innerHTML = "";
+      if (cabecera) lista.appendChild(cabecera);
       if (canciones.length === 0) {
-        lista.innerHTML = '<p class="aviso">No hay canciones aquí todavía. Pulsa el 🤍 de una canción para guardarla.</p>';
+        lista.insertAdjacentHTML("beforeend", '<p class="aviso">No hay canciones aquí todavía. Pulsa el 🤍 de una canción para guardarla.</p>');
         return;
       }
       canciones.forEach((c, i) => {
         const fila = document.createElement("div");
-        fila.className = "cancion" + (cola[posicion]?.id === c.id ? " sonando" : "");
+        fila.className = "cancion" + (cola === canciones && posicion === i ? " sonando" : "");
+        const guardada = estaGuardada(c.id);
         fila.innerHTML = `
           <span class="num">${i + 1}</span>
           <img src="${c.img}" alt="">
           <div style="min-width:0"><div class="titulo"></div><div class="canal"></div></div>
-          <button class="corazon ${esFavorita(c.id) ? "lleno" : ""}" title="Favorito">${esFavorita(c.id) ? "💚" : "🤍"}</button>`;
+          <button class="corazon ${guardada ? "lleno" : ""}" title="Guardar en carpeta">${guardada ? "💚" : "🤍"}</button>`;
         // textContent (y no innerHTML) para que un título raro no rompa la página
         fila.querySelector(".titulo").textContent = c.titulo;
         fila.querySelector(".canal").textContent = c.canal;
         fila.onclick = () => { cola = canciones; tocar(i); };
-        fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); alternarFavorito(c); };
+        fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); abrirHoja(c); };
         lista.appendChild(fila);
       });
     }
 
-    // =====================================================================
-    // 5) FAVORITOS
-    // =====================================================================
-    function alternarFavorito(c) {
-      if (esFavorita(c.id)) favoritos = favoritos.filter(f => f.id !== c.id);
-      else favoritos.push(c);
-      guardar("favoritos", favoritos);
-      // Volvemos a pintar la vista actual para que el corazón cambie
-      if (vistaActual === "favoritos") pintarLista("Tus favoritos", favoritos);
-      else pintarLista(document.getElementById("tituloLista").textContent, cola);
+    // Vuelve a pintar lo que estés viendo (por ejemplo, tras guardar una canción)
+    let ultimaLista = { titulo: "", canciones: [] };
+    function repintar() {
+      if (vistaActual === "biblioteca") mostrarBiblioteca();
+      else if (vistaActual.startsWith("carpeta:")) mostrarCarpeta(vistaActual.slice(8));
+      else if (ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
     }
+
+    // =====================================================================
+    // 5) CARPETAS (tu biblioteca)
+    // =====================================================================
+    function crearCarpeta(nombre) {
+      nombre = nombre.trim();
+      if (!nombre) return null;
+      const nueva = { id: "c" + Date.now(), nombre, canciones: [] };
+      carpetas.push(nueva);
+      guardarCarpetas();
+      return nueva;
+    }
+
+    function mostrarBiblioteca() {
+      document.getElementById("tituloLista").textContent = "Tu biblioteca";
+      const lista = document.getElementById("lista");
+      lista.innerHTML = `
+        <form class="nuevaCarpeta" id="formNueva">
+          <input id="nombreNueva" placeholder="Nombre de la nueva carpeta" autocomplete="off">
+          <button class="boton">+ Crear</button>
+        </form>
+        <div class="carpetas" id="gridCarpetas"></div>`;
+      document.getElementById("formNueva").onsubmit = (e) => {
+        e.preventDefault();
+        if (crearCarpeta(document.getElementById("nombreNueva").value)) mostrarBiblioteca();
+      };
+      const grid = document.getElementById("gridCarpetas");
+      carpetas.forEach(k => {
+        const el = document.createElement("div");
+        el.className = "carpeta";
+        // La tapa de la carpeta es la portada de su primera canción
+        el.innerHTML = k.canciones.length
+          ? `<img class="tapa" src="${k.canciones[0].img}" alt="">`
+          : `<div class="tapa">${k.id === "fav" ? "💚" : "🎵"}</div>`;
+        el.insertAdjacentHTML("beforeend", '<div class="titulo"></div><div class="canal"></div>');
+        el.querySelector(".titulo").textContent = k.nombre;
+        el.querySelector(".canal").textContent = k.canciones.length + (k.canciones.length === 1 ? " canción" : " canciones");
+        el.onclick = () => cambiarVista("carpeta:" + k.id);
+        grid.appendChild(el);
+      });
+    }
+
+    function mostrarCarpeta(id) {
+      const k = carpetas.find(x => x.id === id);
+      if (!k) return cambiarVista("biblioteca");
+      const cab = document.createElement("div");
+      cab.className = "acciones";
+      cab.innerHTML = `
+        <button class="boton botonRedondo" title="Reproducir todo">▶</button>
+        <button class="boton gris" data-a="mezclar">🔀 Aleatorio</button>
+        <button class="boton gris" data-a="volver">← Biblioteca</button>
+        ${k.id === "fav" ? "" : '<button class="boton gris" data-a="borrar">🗑 Borrar carpeta</button>'}`;
+      // ▶ Reproducir: la cola pasa a ser TODA la carpeta, empezando por la primera
+      cab.querySelector(".botonRedondo").onclick = () => {
+        if (!k.canciones.length) return;
+        cola = k.canciones; tocar(0); mostrarCarpeta(id);
+      };
+      cab.querySelector('[data-a="mezclar"]').onclick = () => {
+        if (!k.canciones.length) return;
+        cola = [...k.canciones].sort(() => Math.random() - 0.5);   // copia desordenada
+        tocar(0);
+      };
+      cab.querySelector('[data-a="volver"]').onclick = () => cambiarVista("biblioteca");
+      const borrar = cab.querySelector('[data-a="borrar"]');
+      if (borrar) borrar.onclick = () => {
+        // Primer toque avisa, segundo toque borra (sin ventanitas)
+        if (borrar.dataset.seguro) {
+          carpetas = carpetas.filter(x => x.id !== id); guardarCarpetas(); cambiarVista("biblioteca");
+        } else { borrar.dataset.seguro = "1"; borrar.textContent = "¿Seguro? Toca otra vez"; }
+      };
+      pintarLista(k.nombre, k.canciones, cab);
+    }
+
+    // ----- Hoja "Guardar en carpeta" -----
+    let cancionHoja = null;
+    function abrirHoja(c) {
+      cancionHoja = c;
+      document.getElementById("hojaCancion").textContent = c.titulo;
+      pintarHoja();
+      document.getElementById("fondoHoja").hidden = false;
+    }
+    function pintarHoja() {
+      const caja = document.getElementById("hojaCarpetas");
+      caja.innerHTML = "";
+      carpetas.forEach(k => {
+        const dentro = k.canciones.some(x => x.id === cancionHoja.id);
+        const b = document.createElement("button");
+        b.className = "opcionCarpeta";
+        b.innerHTML = `<span></span><span class="marca">${dentro ? "✔" : "＋"}</span>`;
+        b.firstElementChild.textContent = k.nombre;
+        // Tocar una carpeta mete o saca la canción de ella
+        b.onclick = () => {
+          if (dentro) k.canciones = k.canciones.filter(x => x.id !== cancionHoja.id);
+          else k.canciones.push(cancionHoja);
+          guardarCarpetas(); pintarHoja();
+        };
+        caja.appendChild(b);
+      });
+    }
+    document.getElementById("hojaNueva").onsubmit = (e) => {
+      e.preventDefault();
+      const campoNombre = document.getElementById("hojaNombre");
+      const nueva = crearCarpeta(campoNombre.value);
+      if (!nueva) return;
+      nueva.canciones.push(cancionHoja);   // la canción entra directo en la carpeta nueva
+      guardarCarpetas(); campoNombre.value = ""; pintarHoja();
+    };
+    function cerrarHoja() { document.getElementById("fondoHoja").hidden = true; repintar(); }
+    document.getElementById("hojaListo").onclick = cerrarHoja;
+    document.getElementById("fondoHoja").onclick = (e) => { if (e.target.id === "fondoHoja") cerrarHoja(); };
 
     let vistaActual = "buscar";
     function cambiarVista(vista, pintar = true) {
       vistaActual = vista;
-      document.querySelectorAll(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === vista));
+      const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
+      document.querySelectorAll(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
       if (!pintar) return;
-      if (vista === "favoritos") pintarLista("Tus favoritos", favoritos);
+      if (vista === "biblioteca") mostrarBiblioteca();
+      else if (vista.startsWith("carpeta:")) mostrarCarpeta(vista.slice(8));
       else mostrarInicio();
     }
     document.querySelectorAll(".menu").forEach(b => b.onclick = () => cambiarVista(b.dataset.vista));
 
     // =====================================================================
-    // 6) EL REPRODUCTOR (YouTube IFrame API)
+    // 6) EL REPRODUCTOR (YouTube IFrame API) con PRECARGA
     // =====================================================================
-    // YouTube llama a esta función sola cuando su script ha cargado
+    // Truco tipo Spotify: tenemos DOS reproductores. Mientras uno suena,
+    // el otro carga la siguiente canción en silencio y la deja en pausa.
+    // Cuando acaba la canción, solo cambiamos de reproductor: ¡sin esperas!
     function onYouTubeIframeAPIReady() {
-      reproductor = new YT.Player("reproductorYT", {
-        width: "100%", height: "100%",
-        // controls: 0 quita los botones de YouTube (usamos los nuestros)
-        playerVars: { playsinline: 1, controls: 0, rel: 0, fs: 0, iv_load_policy: 3, disablekb: 1 },
-        events: {
-          onReady: () => reproductor.setVolume(80),
-          // Cuando una canción termina (estado 0), pasamos a la siguiente
-          onStateChange: (e) => {
-            if (e.data === YT.PlayerState.ENDED) siguiente();
-            document.getElementById("btnPlay").textContent = e.data === YT.PlayerState.PLAYING ? "⏸" : "▶";
+      [0, 1].forEach(n => {
+        jugadores[n] = new YT.Player("reproductorYT" + n, {
+          width: "100%", height: "100%",
+          // controls: 0 quita los botones de YouTube (usamos los nuestros)
+          playerVars: { playsinline: 1, controls: 0, rel: 0, fs: 0, iv_load_policy: 3, disablekb: 1 },
+          events: {
+            onReady: () => {
+              jugadores[n].setVolume(volumen);
+              jugadores[n].getIframe().classList.toggle("dormido", n !== activo);
+            },
+            onStateChange: (e) => alCambiarEstado(n, e.data)
           }
-        }
+        });
       });
+      reproductor = jugadores[activo];
+    }
+
+    function alCambiarEstado(n, estado) {
+      const E = YT.PlayerState;
+      if (n === activo) {
+        // El que suena: si termina, siguiente; si empieza a sonar, precargamos la que viene
+        if (estado === E.ENDED) siguiente();
+        if (estado === E.PLAYING) precargarSiguiente();
+        const btn = document.getElementById("btnPlay");
+        const icono = estado === E.PLAYING ? "⏸" : "▶";
+        if (btn.textContent !== icono) {
+          btn.textContent = icono;
+          // Pequeño "latido" cuando cambia entre play y pausa
+          btn.classList.remove("latido"); void btn.offsetWidth; btn.classList.add("latido");
+        }
+      } else if (estado === E.PLAYING && precarga.id) {
+        // El de reserva: en cuanto arranca, lo pausamos al principio (ya está cargado)
+        jugadores[n].pauseVideo();
+        jugadores[n].seekTo(0, true);
+      }
+    }
+
+    function precargarSiguiente() {
+      const sig = cola[posicion + 1];
+      const reserva = jugadores[1 - activo];
+      if (!sig || !reserva?.loadVideoById || precarga.id === sig.id) return;
+      precarga = { id: sig.id };
+      reserva.mute();
+      reserva.loadVideoById(sig.id);
+    }
+
+    function cambiarDeReproductor() {
+      const viejo = jugadores[activo];
+      activo = 1 - activo;
+      reproductor = jugadores[activo];
+      viejo.stopVideo();
+      viejo.getIframe().classList.add("dormido");
+      reproductor.getIframe().classList.remove("dormido");
     }
 
     function tocar(i) {
       if (!cola[i]) return;
       posicion = i;
       const c = cola[i];
-      if (reproductor?.loadVideoById) reproductor.loadVideoById(c.id);
+      if (jugadores[0]?.loadVideoById && jugadores[1]?.loadVideoById) {
+        if (precarga.id === c.id) {
+          // ¡Ya estaba cargada! Cambiamos al reproductor de reserva y suena al instante
+          cambiarDeReproductor();
+          reproductor.seekTo(0, true);
+          reproductor.unMute(); reproductor.setVolume(volumen);
+          reproductor.playVideo();
+          // Plan B: si el navegador no la deja sonar, la cargamos de la forma normal
+          const esta = reproductor;
+          setTimeout(() => {
+            if (esta === reproductor && posicion === i && esta.getPlayerState() !== YT.PlayerState.PLAYING &&
+                esta.getPlayerState() !== YT.PlayerState.PAUSED) esta.loadVideoById(c.id);
+          }, 2500);
+        } else {
+          jugadores[1 - activo].stopVideo();
+          reproductor.unMute(); reproductor.setVolume(volumen);
+          reproductor.loadVideoById(c.id);
+        }
+        precarga = { id: null };
+      }
       document.getElementById("infoImg").src = c.img;
       document.getElementById("infoTitulo").textContent = c.titulo;
       document.getElementById("infoCanal").textContent = c.canal;
       document.title = "▶ " + c.titulo;
       document.getElementById("sonandoAhora").classList.add("visible");
-      // Portada en grande (hqdefault es la imagen más grande y cuadrada-friendly)
+      // Portada en grande (hqdefault es la imagen más grande)
       document.getElementById("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
       // Marcamos en verde la que suena
-      document.querySelectorAll(".cancion").forEach((f, j) => f.classList.toggle("sonando", j === i && document.getElementById("lista").children.length === cola.length));
+      document.querySelectorAll(".cancion").forEach((f, j) => f.classList.toggle("sonando", j === i && document.querySelectorAll(".cancion").length === cola.length));
     }
     function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
     function anterior()  { if (posicion > 0) tocar(posicion - 1); }
@@ -527,7 +764,10 @@
       if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
       else reproductor.playVideo();
     };
-    document.getElementById("barraVolumen").oninput = (e) => reproductor?.setVolume(e.target.value);
+    document.getElementById("barraVolumen").oninput = (e) => {
+      volumen = Number(e.target.value);
+      reproductor?.setVolume(volumen);
+    };
     document.getElementById("barraProgreso").oninput = (e) => {
       if (!reproductor) return;
       reproductor.seekTo(reproductor.getDuration() * e.target.value / 100, true);

@@ -1333,7 +1333,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "62 · 31 oct";
+    const VERSION = "63 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2807,7 +2807,8 @@
     $("opSacudir").onclick = async () => {
       // En iPhone hay que pedir permiso para usar el sensor (en Android no hace falta)
       if (!sacudir && typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
-        try { if (await DeviceMotionEvent.requestPermission() !== "granted") return avisar("Sin permiso para el sensor"); } catch {}
+        try { if (await DeviceMotionEvent.requestPermission() !== "granted")
+          return avisar("Brave bloquea el sensor: actívalo en Configuración → Configuración de sitios → Sensores de movimiento", "Entendido", () => {}); } catch {}
       }
       sacudir = !sacudir;
       guardar("sacudir", sacudir);

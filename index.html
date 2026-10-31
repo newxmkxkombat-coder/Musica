@@ -482,6 +482,8 @@
       100% { transform: scale(1.38) translate(2%, -1.5%); }
     }
     #pantalla.abierta #fondoPortada, #video.enPantalla #portada { animation: respirar 24s ease-in-out infinite alternate; }
+    /* 🔋 En pausa, el fondo deja de moverse (ahorra batería) */
+    body:not(.musicaSonando) #fondoPortada, body:not(.musicaSonando) #portada { animation-play-state: paused !important; }
     /* Botón "Cambiar a vídeo" (pastilla negra, como Spotify) */
     #btnVideo {
       align-self: flex-start; display: inline-flex; align-items: center; gap: 10px;
@@ -1391,7 +1393,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "68 · 31 oct";
+    const VERSION = "69 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1399,6 +1401,12 @@
       if (h >= 5 && h < 12) return "rgb(150, 86, 34)";   // mañana: naranja de amanecer
       if (h >= 12 && h < 19) return "rgb(28, 84, 132)";  // tarde: azul de cielo
       return "rgb(62, 36, 118)";                          // noche: morado
+    }
+    function pintarPie(pie = $("pieVersion")) {
+      if (!pie) return;
+      const red = tipoDeRed();
+      pie.textContent = "Mi Música · versión " + VERSION + " · " + cuantasPrecargar() + " canciones listas" +
+        (red === "wifi" ? " · wifi" : red === "datos" ? " · ahorro de datos" : "");
     }
     function mostrarInicio() {
       ponerColorDeFondo(colorDeLaHora());
@@ -1439,7 +1447,8 @@
 
       const pie = document.createElement("p");
       pie.className = "aviso version";
-      pie.textContent = "Mi Música · versión " + VERSION + " · " + (TOTAL_REPRODUCTORES - 1) + " canciones listas";
+      pie.id = "pieVersion";
+      pintarPie(pie);
       setTimeout(() => $("lista").appendChild(pie), 0);   // siempre al final
       // Recomendaciones (de Apple Music, gratis). Mientras cargan, cajitas "fantasma".
       if (recomendaciones) recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
@@ -2001,10 +2010,32 @@
     // Deja cargadas en los reproductores de reserva las canciones que más seguro pondrás:
     // las 3 siguientes, las 2 anteriores y la primera de la lista (por si vuelves al principio).
     let esperasPrecarga = [];
+    // 📶 MODO DATOS / WIFI: el móvil nos dice qué conexión usas (si el navegador lo permite).
+    //   - Datos móviles (o "ahorro de datos" activado): precargamos solo la siguiente y la anterior.
+    //   - Wifi: precargamos todas las que quepan.
+    function tipoDeRed() {
+      const c = navigator.connection;
+      if (!c) return "desconocida";
+      if (c.saveData || c.type === "cellular" || /(^|-)2g$/.test(c.effectiveType || "")) return "datos";
+      if (c.type === "wifi" || c.type === "ethernet") return "wifi";
+      return "desconocida";
+    }
+    function cuantasPrecargar() {
+      const red = tipoDeRed();
+      if (red === "datos") return Math.min(2, TOTAL_REPRODUCTORES - 1);
+      return TOTAL_REPRODUCTORES - 1;
+    }
+    navigator.connection?.addEventListener?.("change", () => {
+      const red = tipoDeRed();
+      if (red === "datos") avisar("Con datos móviles: precargamos menos para ahorrar megas");
+      if (red === "wifi") avisar("Con wifi: precargamos más canciones");
+      precargarVecinas();
+      if (vistaActual === "inicio") pintarPie();
+    });
     function cancionesQueQueremos() {
       return [...new Set([
         cola[posicion + 1], cola[posicion - 1], cola[posicion + 2], cola[posicion + 3], cola[0], cola[posicion - 2],
-      ].map(c => c?.id).filter(id => id && id !== cola[posicion]?.id))].slice(0, TOTAL_REPRODUCTORES - 1);
+      ].map(c => c?.id).filter(id => id && id !== cola[posicion]?.id))].slice(0, cuantasPrecargar());
     }
     // Cuando pides una canción que NO estaba lista, paramos las que se estaban cargando
     // de fondo para que no le quiten internet. Las ya cargadas se quedan como están.
@@ -2556,7 +2587,7 @@
 
     // Avisito blanco que sale 2 segundos abajo
     let esperaAviso = null;
-    function avisar(texto, textoBoton, alTocar) {
+    function avisar(texto, textoBoton, alTocar, duracion) {
       const a = $("avisito");
       a.textContent = texto;
       if (textoBoton) {   // por ejemplo "Deshacer"
@@ -2567,7 +2598,7 @@
       }
       a.hidden = false;
       clearTimeout(esperaAviso);
-      esperaAviso = setTimeout(() => a.hidden = true, textoBoton ? 4000 : 2000);
+      esperaAviso = setTimeout(() => a.hidden = true, duracion || (textoBoton ? 4000 : 2000));
     }
     // Como en Spotify: si la canción ya lleva más de 3 segundos, ⏮ la empieza de nuevo
     function anterior() {
@@ -2687,7 +2718,11 @@
       barra.addEventListener("click", (e) => e.stopPropagation());
       barra.addEventListener("change", () => {
         arrastrando = false;
-        if (reproductor?.getDuration) reproductor.seekTo(reproductor.getDuration() * barra.value / 1000, true);
+        if (!reproductor?.getDuration) return;
+        const segundo = reproductor.getDuration() * barra.value / 1000;
+        reproductor.seekTo(segundo, true);
+        ponerProgreso(segundo, reproductor.getDuration());   // por si está en pausa (el reloj no corre)
+        seguirLetra(segundo, true);
       });
       barra.oninput = () => barra.style.setProperty("--pct", barra.value / 10 + "%");
     });
@@ -2701,14 +2736,28 @@
       if (arrastrando) return;
       todos(".barraTiempo").forEach(b => { b.value = pct * 10; b.style.setProperty("--pct", pct + "%"); });
     }
-    // Cada medio segundo actualizamos el tiempo (y la línea de la letra que toca)
-    setInterval(() => {
+    // Cada medio segundo actualizamos el tiempo (y la línea de la letra que toca).
+    // 🔋 AHORRO DE BATERÍA: si la música está en pausa no hacemos nada, y con la pantalla
+    // apagada (o en otra app) no dibujamos nada: solo lo necesario para la mezcla y los cortes.
+    function tic() {
       if (!reproductor?.getDuration || posicion < 0) return;
-      ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
-      seguirLetra(reproductor.getCurrentTime());
+      const estado = reproductor.getPlayerState?.();
+      const sonando = estado === YT.PlayerState.PLAYING || estado === YT.PlayerState.BUFFERING;
+      if (!sonando && !mezcla) return;   // en pausa: nada que actualizar
+      if (!document.hidden) {
+        ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
+        seguirLetra(reproductor.getCurrentTime());
+      }
       quizasMezclar();
       vigilarCortes();
-    }, 500);
+    }
+    setInterval(tic, 500);
+    // Al volver a la app, la ponemos al día enseguida (aunque esté en pausa)
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden || !reproductor?.getDuration || posicion < 0) return;
+      ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
+      seguirLetra(reproductor.getCurrentTime(), true);
+    });
 
     // =====================================================================
     // 📶 SI SE VA EL INTERNET
@@ -3416,6 +3465,26 @@
 
     // Registramos el ayudante para que se pueda instalar como app
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+    // ⚡ ¿HAY VERSIÓN NUEVA? La app abre con la copia guardada (al instante) y el ayudante
+    // descarga la nueva por detrás. Miramos la versión de la copia nueva: si es distinta
+    // a la nuestra, avisamos con un botón para actualizar.
+    let yaAvisadaVersion = false;
+    async function mirarVersionNueva() {
+      if (yaAvisadaVersion || !window.caches) return;
+      try {
+        const copia = await (await caches.open("mi-musica")).match("./");
+        if (!copia) return;
+        const otra = (await copia.text()).match(/const VERSION = "([^"]+)"/)?.[1];
+        if (otra && otra !== VERSION) {
+          yaAvisadaVersion = true;
+          avisar("Hay una versión nueva de la app", "Actualizar", () => location.reload(), 12000);
+        }
+      } catch {}
+    }
+    setTimeout(mirarVersionNueva, 4000);
+    setTimeout(mirarVersionNueva, 15000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(mirarVersionNueva, 3000); });
 
     ponerIconoPlay(false);
     history.replaceState({ vista: "inicio" }, "");   // primera página del historial

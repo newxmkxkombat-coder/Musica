@@ -132,23 +132,47 @@
     @keyframes brillo { to { background-position: -200% 0; } }
 
     /* ----- Buscador ----- */
-    .buscador { margin-bottom: 24px; max-width: 520px; position: relative; }
-    .buscador > .ic { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #000; pointer-events: none; }
+    .buscador { margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    .caja { position: relative; flex: 1; min-width: 0; max-width: 520px; }
+    .caja > .ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #000; pointer-events: none; }
     .buscador input {
-      width: 100%; padding: 14px 18px 14px 48px; border-radius: 8px; border: none;
+      width: 100%; padding: 14px 44px 14px 46px; border-radius: 8px; border: none;
       background: #fff; color: #000; font-size: 15px; font-weight: 600; font-family: inherit;
     }
     .buscador input::placeholder { color: #555; font-weight: 500; }
     .buscador input:focus { outline: none; }
-    .sugerencias { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 5;
-                   background: #232326f5; backdrop-filter: blur(16px); border: 1px solid var(--borde);
-                   border-radius: 12px; padding: 6px; box-shadow: 0 16px 40px #000c; max-height: 60vh; overflow-y: auto; }
-    .sugerencias h4 { color: var(--gris); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; padding: 10px 10px 4px; }
-    .sug { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; min-width: 0; }
-    .sug:hover { background: #ffffff12; }
-    .sug img { width: 42px; height: 42px; border-radius: 6px; flex: none; background: var(--tarjeta); }
-    .sug .lupa { width: 42px; display: grid; place-items: center; color: var(--gris); flex: none; }
-    .sug div { min-width: 0; }
+    .buscador input::-webkit-search-cancel-button { display: none; }
+    #volverBusqueda, #borrarBusqueda { display: none; }
+    #borrarBusqueda { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; }
+
+    /* ----- Modo "escribiendo" (como Spotify): barra oscura, flecha atrás y
+       las sugerencias ocupan la pantalla, sin ventanita ----- */
+    main.escribiendo { background: #121212; }   /* fondo liso mientras escribes */
+    main.escribiendo .buscador { margin: -4px 0 8px; }
+    main.escribiendo #volverBusqueda { display: grid; color: var(--texto); flex: none; }
+    main.escribiendo #volverBusqueda .ic { width: 26px; height: 26px; }
+    main.escribiendo .caja > .ic { display: none; }
+    main.escribiendo .buscador input { background: #2a2a2a; color: var(--texto); border-radius: 999px; padding: 12px 44px 12px 18px; font-weight: 500; font-size: 17px; }
+    main.escribiendo .buscador input::placeholder { color: var(--gris); }
+    main.escribiendo #borrarBusqueda { display: grid; }
+    #borrarBusqueda span { width: 22px; height: 22px; border-radius: 50%; background: #b3b3b3; color: #2a2a2a; display: grid; place-items: center; }
+    #borrarBusqueda .ic { width: 14px; height: 14px; }
+    main.escribiendo #tituloLista, main.escribiendo #lista { display: none; }
+    .sugerencias { display: none; }
+    main.escribiendo .sugerencias { display: block; margin: 0 -8px; }
+    .sug { display: flex; gap: 14px; align-items: center; padding: 10px 8px; border-radius: 6px; cursor: pointer; min-width: 0; }
+    .sug:active { background: #ffffff12; }
+    .sug img { width: 56px; height: 56px; border-radius: 4px; flex: none; background: var(--tarjeta); object-fit: cover; }
+    .sug .lupa { width: 28px; display: grid; place-items: center; color: var(--texto); flex: none; }
+    .sug .lupa .ic { width: 24px; height: 24px; }
+    .sug > div { min-width: 0; flex: 1; }
+    .sug .frase { font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sug .frase .escrito { color: var(--gris); }      /* lo que ya escribiste, en gris */
+    .sug .titulo { font-size: 17px; font-weight: 500; }
+    .sug .canal { font-size: 14px; }
+    .sug .flecha { color: var(--gris); flex: none; }
+    .sug .flecha .ic { width: 22px; height: 22px; }
+    .frases { margin-bottom: 14px; }
 
     /* ----- Lista de canciones ----- */
     .cancion {
@@ -394,6 +418,9 @@
     <symbol id="i-basura" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></g></symbol>
     <symbol id="i-atras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
     <symbol id="i-abajo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></symbol>
+    <symbol id="i-flechaAtras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m6-6-6 6 6 6"/></symbol>
+    <symbol id="i-equis" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M7 7l10 10M17 7 7 17"/></symbol>
+    <symbol id="i-rellenar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 18 6 6m0 9V6h9"/></symbol>
     <symbol id="i-mas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-nota" viewBox="0 0 24 24"><path d="M9 17.5V6.2a1 1 0 0 1 .76-.97l9-2.25A1 1 0 0 1 20 4v11.5a3 3 0 1 1-2-2.83V7.3l-7 1.75v8.45a3 3 0 1 1-2-2.83z"/></symbol>
@@ -422,10 +449,15 @@
     </div>
     <!-- El buscador solo se ve en la pestaña "Buscar" -->
     <form class="buscador" id="formBuscar" hidden>
-      <svg class="ic"><use href="#i-buscar"/></svg>
-      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off" enterkeyhint="search">
-      <div class="sugerencias" id="sugerencias" hidden></div>
+      <button type="button" class="iconoBoton" id="volverBusqueda" title="Volver"><svg class="ic"><use href="#i-flechaAtras"/></svg></button>
+      <div class="caja">
+        <svg class="ic"><use href="#i-buscar"/></svg>
+        <input id="campoBuscar" type="search" placeholder="¿Qué quieres escuchar?" autocomplete="off" enterkeyhint="search">
+        <button type="button" class="iconoBoton" id="borrarBusqueda" title="Borrar"><span><svg class="ic"><use href="#i-equis"/></svg></span></button>
+      </div>
     </form>
+    <!-- Sugerencias mientras escribes: ocupan la pantalla, como en Spotify -->
+    <div class="sugerencias" id="sugerencias"></div>
     <h2 id="tituloLista"></h2>
     <div id="lista"></div>
   </main>
@@ -637,9 +669,8 @@
 
     $("formBuscar").onsubmit = (e) => {
       e.preventDefault();   // evita que la página se recargue
-      cerrarSugerencias();
-      campo.blur();         // esconde el teclado del móvil
       const texto = campo.value.trim();
+      salirDeEscribir();
       if (texto) buscar(texto);
     };
 
@@ -658,7 +689,7 @@
     campo.addEventListener("input", () => {
       clearTimeout(temporizador);
       const texto = campo.value.trim();
-      if (!texto || idDeEnlace(texto)) return cerrarSugerencias();
+      if (!texto || idDeEnlace(texto)) { ultimaPeticion++; cajaSug.innerHTML = ""; return; }
       temporizador = setTimeout(() => pedirSugerencias(texto), 250);
     });
 
@@ -700,42 +731,68 @@
 
     function pintarSugerencias(canciones, frases) {
       cajaSug.innerHTML = "";
-      const fila = (html, alTocar) => {
+      const escrito = campo.value.trim();
+      const fila = (donde, html, alTocar) => {
         const el = document.createElement("div");
         el.className = "sug"; el.innerHTML = html;
-        // mousedown (y no click) para que el buscador no se cierre antes
-        el.addEventListener("mousedown", (e) => { e.preventDefault(); alTocar(); });
-        cajaSug.appendChild(el);
+        el.onclick = alTocar;
+        donde.appendChild(el);
         return el;
       };
-      if (frases.length) {
-        cajaSug.insertAdjacentHTML("beforeend", "<h4>Sugerencias</h4>");
-        frases.forEach(f => {
-          const el = fila(`<span class="lupa">${icono("buscar")}</span><div><div class="titulo"></div></div>`, () => {
-            campo.value = f; cerrarSugerencias(); campo.blur(); buscar(f);
-          });
-          el.querySelector(".titulo").textContent = f;
+      // 1) Frases sugeridas: lo que ya escribiste en gris y lo que falta en blanco
+      const grupoFrases = document.createElement("div");
+      grupoFrases.className = "frases";
+      cajaSug.appendChild(grupoFrases);
+      frases.forEach(f => {
+        const el = fila(grupoFrases, `<span class="lupa">${icono("buscar")}</span><div class="frase"></div>
+          <button class="iconoBoton flecha" title="Completar">${icono("rellenar")}</button>`, () => {
+          campo.value = f; salirDeEscribir(); buscar(f);
         });
-      }
-      if (canciones.length) {
-        cajaSug.insertAdjacentHTML("beforeend", "<h4>Canciones</h4>");
-        canciones.forEach(c => {
-          const el = fila('<img alt=""><div><div class="titulo"></div><div class="canal"></div></div>', () => {
-            const texto = c.artista + " - " + c.titulo;
-            campo.value = texto; cerrarSugerencias(); campo.blur();
-            buscar(texto, true);   // la buscamos en YouTube y suena directo
-          });
-          el.querySelector("img").src = c.img;
-          el.querySelector(".titulo").textContent = c.titulo;
-          el.querySelector(".canal").textContent = c.artista;
+        const frase = el.querySelector(".frase");
+        if (f.toLowerCase().startsWith(escrito.toLowerCase())) {
+          frase.innerHTML = '<span class="escrito"></span><span></span>';
+          frase.children[0].textContent = f.slice(0, escrito.length);
+          frase.children[1].textContent = f.slice(escrito.length);
+        } else frase.textContent = f;
+        // La flechita ↖ copia la frase al buscador para que sigas escribiendo
+        el.querySelector(".flecha").onclick = (e) => {
+          e.stopPropagation();
+          campo.value = f + " "; campo.focus(); pedirSugerencias(f);
+        };
+      });
+      // 2) Canciones con portada: al tocarlas suenan directo
+      canciones.forEach(c => {
+        const el = fila(cajaSug, '<img alt=""><div><div class="titulo"></div><div class="canal"></div></div>', () => {
+          const texto = c.artista + " - " + c.titulo;
+          campo.value = texto; salirDeEscribir();
+          buscar(texto, true);   // la buscamos en YouTube y suena directo
         });
-      }
-      cajaSug.hidden = !(frases.length || canciones.length);
+        el.querySelector("img").src = c.img;
+        el.querySelector(".titulo").textContent = c.titulo;
+        el.querySelector(".canal").textContent = "Canción • " + c.artista;
+      });
     }
 
-    function cerrarSugerencias() { clearTimeout(temporizador); ultimaPeticion++; cajaSug.hidden = true; }
-    campo.addEventListener("blur", () => setTimeout(cerrarSugerencias, 150));
-    campo.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarSugerencias(); });
+    // ----- Entrar y salir del modo "escribiendo" -----
+    function entrarAEscribir() {
+      if ($("contenido").classList.contains("escribiendo")) return;
+      $("contenido").classList.add("escribiendo");
+      history.pushState({ vista: vistaActual, capa: "busqueda" }, "");   // el "atrás" lo cierra
+    }
+    function salirDeEscribir() {
+      clearTimeout(temporizador); ultimaPeticion++;
+      campo.blur();         // esconde el teclado del móvil
+      if (!$("contenido").classList.contains("escribiendo")) return;
+      $("contenido").classList.remove("escribiendo");
+      if (history.state?.capa === "busqueda") history.replaceState({ vista: vistaActual }, "");
+    }
+    function cerrarSugerencias() { salirDeEscribir(); }
+    campo.addEventListener("focus", entrarAEscribir);
+    campo.addEventListener("keydown", (e) => { if (e.key === "Escape") salirDeEscribir(); });
+    $("volverBusqueda").onclick = () => {
+      if (history.state?.capa === "busqueda") history.back(); else salirDeEscribir();
+    };
+    $("borrarBusqueda").onclick = () => { campo.value = ""; cajaSug.innerHTML = ""; campo.focus(); };
 
     // =====================================================================
     // 4) INICIO: accesos rápidos, lo reciente y recomendaciones
@@ -748,7 +805,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "19 · 31 oct";
+    const VERSION = "20 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1030,6 +1087,7 @@
       const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
       todos(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
       $("formBuscar").hidden = vista !== "buscar";
+      $("contenido").classList.remove("escribiendo");
       $("contenido").scrollTop = 0;
       if (!pintar) return;
       if (vista === "inicio") mostrarInicio();
@@ -1225,6 +1283,7 @@
       const estado = e.state || { vista: "inicio" };
       // Primero cerramos lo que esté abierto encima (pantalla grande u hoja)
       if (estado.capa !== "pantalla") $("pantalla").classList.remove("abierta");
+      if (estado.capa !== "busqueda") { $("contenido").classList.remove("escribiendo"); campo.blur(); }
       if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
     });

@@ -667,6 +667,7 @@
     <symbol id="i-flechaAtras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m6-6-6 6 6 6"/></symbol>
     <symbol id="i-completa" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
     <symbol id="i-sacudir" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8c-1 1.3-1 6.7 0 8M20 8c1 1.3 1 6.7 0 8"/></g></symbol>
+    <symbol id="i-saltar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l7 6-7 6zM12 6l7 6-7 6z"/><path d="M21 5v14"/></g></symbol>
     <symbol id="i-equis" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M7 7l10 10M17 7 7 17"/></symbol>
     <symbol id="i-rellenar" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 18 6 6m0 9V6h9"/></symbol>
     <symbol id="i-mas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
@@ -835,6 +836,7 @@
         <b id="textoMezcla"></b>
       </div>
       <button class="opcion" id="opSacudir"></button>
+      <button class="opcion" id="opIntro"></button>
       <button class="opcion" id="opYouTube"><svg class="ic"><use href="#i-video"/></svg>Abrir en YouTube</button>
     </div>
   </div>
@@ -1393,7 +1395,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "72 · 31 oct";
+    const VERSION = "73 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2954,6 +2956,39 @@
       catch { avisar("Escribe en Brave: brave://settings/content/sensors"); }
       setTimeout(abrirEnBrave, 900);
     };
+    // =====================================================================
+    // ⏩ SALTAR EL INTRO (automático)
+    // =====================================================================
+    // La letra con tiempos nos dice en qué segundo empieza a CANTAR. Si eso pasa después
+    // de 12 segundos, saltamos hasta 2 segundos antes de la primera frase.
+    // Solo lo hacemos si la letra es de la MISMA versión (dura casi lo mismo que el vídeo):
+    // si no, el segundo podría no cuadrar. Sale un aviso con "Deshacer" por si querías el intro.
+    let saltarIntros = leer("saltarIntros", true);
+    function quizasSaltarIntro(x) {
+      if (!saltarIntros || !x?.syncedLyrics || letraAproximada || mezcla || !reproductor?.getDuration) return;
+      const dura = reproductor.getDuration(), va = reproductor.getCurrentTime();
+      if (!dura || Math.abs(dura - (x.duration || 0)) > 3) return;   // otra versión: no nos fiamos
+      const primera = letra.find(l => l.texto && l.texto !== "♪" && l.texto.replace(/[^\p{L}]/gu, "").length > 1);
+      if (!primera || primera.t < 12) return;                         // no hay intro largo
+      const destino = primera.t - 2;
+      if (va > 10 || va >= destino) return;                           // ya lo pasaste (o moviste la barra)
+      const idAhora = cola[posicion]?.id;
+      reproductor.seekTo(destino, true);
+      avisar("⏩ Intro saltado (" + Math.round(destino) + " s)", "Deshacer", () => {
+        if (cola[posicion]?.id === idAhora) reproductor.seekTo(0, true);
+      }, 5000);
+    }
+    function pintarIntro() {
+      $("opIntro").innerHTML = icono("saltar") + "Saltar intros: " + (saltarIntros ? "<b style='color:var(--verde)'>Sí</b>" : "No");
+    }
+    $("opIntro").onclick = () => {
+      saltarIntros = !saltarIntros;
+      guardar("saltarIntros", saltarIntros);
+      pintarIntro();
+      avisar(saltarIntros ? "Los intros largos se saltarán solos" : "Los intros sonarán completos");
+    };
+    pintarIntro();
+
     function pintarSacudir() {
       $("opSacudir").innerHTML = icono("sacudir") + "Sacudir para pausar: " + (sacudir ? "<b style='color:var(--verde)'>Sí</b>" : "No");
     }
@@ -3107,6 +3142,7 @@
         if (cola[posicion]?.id !== id) return;   // ya cambiaste de canción
         if (memoriaLetras[id] === "nada") return $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";
         pintarLetra(memoriaLetras[id]);
+        quizasSaltarIntro(memoriaLetras[id]);
       } catch { /* sin internet: simplemente no la mostramos */ }
     }
 

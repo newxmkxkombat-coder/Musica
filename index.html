@@ -1312,7 +1312,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "60 · 31 oct";
+    const VERSION = "61 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2775,30 +2775,30 @@
     }
 
     // Pregunta a LRCLIB de varias formas, de la más exacta a la más suelta, hasta encontrarla
-    // Buscamos la letra en DOS páginas gratis:
-    //   1) LRCLIB: letras CON tiempos (se van pintando mientras suena). La mejor.
-    //   2) Lyrics.ovh: solo el texto, pero tiene muchas que LRCLIB no tiene.
-    // Y si el título de YouTube es raro, le preguntamos a Deezer el nombre EXACTO.
+    // Buscamos la letra en LRCLIB (letras CON tiempos, gratis).
+    // Si el título de YouTube es raro, le preguntamos a Deezer el nombre EXACTO.
+    // (Probamos también Lyrics.ovh, pero traía letras de OTRAS canciones y no hay forma
+    //  de comprobarlo porque no dice cuánto dura la canción: la quitamos.)
     // ¿Se parecen dos nombres? ("El Aldeano" y "AL2 El Aldeano" → sí)
     function seParecen(a, b) {
       const x = normalizar(a), y = normalizar(b);
       return x.length > 1 && y.length > 1 && (x.includes(y) || y.includes(x));
     }
     let artistasValidos = [];   // los nombres que aceptamos como "el artista de esta canción"
+    let nombresValidos = [];    // y como "el nombre de esta canción"
     const esDelArtista = (nombre) => !artistasValidos.length || artistasValidos.some(a => seParecen(a, nombre || ""));
-    async function lrclib(intentos, dura, exigirDuracion) {
+    async function lrclib(intentos, dura) {
       let sinTiempos = null;
       for (const intento of intentos) {
         try {
           const r = await fetch("https://lrclib.net/api/search?" + intento);
           if (!r.ok) continue;
           // Solo letras del MISMO artista (si no, salía la letra de otra canción con el mismo nombre)
-          let resultados = (await r.json()).filter(x => (x.syncedLyrics || x.plainLyrics) && esDelArtista(x.artistName) && !x.instrumental)
-            // Y que dure parecido: si la canción dura 6:33 y la letra es de una de 4:00, es OTRA canción
-            // (dejamos 25 segundos de margen porque los vídeos a veces traen intro o final extra)
-            .filter(x => !dura || !x.duration || Math.abs(x.duration - dura) <= 25);
-          // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
-          if (exigirDuracion(intento)) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
+          let resultados = (await r.json()).filter(x => (x.syncedLyrics || x.plainLyrics) && !x.instrumental
+            && esDelArtista(x.artistName)                                         // mismo artista
+            && nombresValidos.some(n => seParecen(n, x.trackName || ""))          // misma canción
+            && x.duration && Math.abs(x.duration - dura) <= 20);                  // dura casi lo mismo
+          // (20 segundos de margen porque los vídeos a veces traen intro o final extra)
           if (!resultados.length) continue;
           // Preferimos letra con tiempos y que dure lo mismo que el vídeo
           const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
@@ -2815,40 +2815,32 @@
       if (!t || !esDelArtista(t.artist?.name) || !seParecen(t.title_short || t.title, cancion)) return null;
       return { artista: t.artist.name, cancion: t.title_short || t.title };
     }
-    async function lyricsOvh(artista, cancion) {
-      try {
-        const r = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artista)}/${encodeURIComponent(cancion)}`);
-        if (!r.ok) return null;
-        const texto = (await r.json()).lyrics;
-        return texto && texto.trim() ? { plainLyrics: texto.replace(/\r/g, ""), fuente: "Lyrics.ovh" } : null;
-      } catch { return null; }
-    }
+    // REGLA DE ORO: mejor SIN letra que con una letra equivocada.
+    // Solo aceptamos una letra si: es del mismo artista, la canción se llama igual
+    // y dura casi lo mismo que el vídeo. Si algo no cuadra, no la mostramos.
     async function buscarLetra(c) {
       const { artista, cancion } = partesDelTitulo(c);
       const dura = reproductor?.getDuration?.() || 0;
+      if (!dura) return "nada";   // sin saber cuánto dura no podemos comprobar nada
       const de = (a, t) => `track_name=${encodeURIComponent(t)}&artist_name=${encodeURIComponent(a)}`;
-      const soloNombre = `q=${encodeURIComponent(cancion)}`;
       // Otras formas de escribir al artista: AL2 "El Aldeano" → El Aldeano, AL2 El Aldeano
       const apodo = (c.canal.match(/["“”«]([^"“”»]+)["“”»]/) || artista.match(/["“”«]([^"“”»]+)["“”»]/) || [])[1];
       const sinComillas = artista.replace(/["“”«»]/g, "").replace(/\s+/g, " ").trim();
       const otrosNombres = [...new Set([apodo, sinComillas].filter(n => n && normalizar(n) !== normalizar(artista)))];
       artistasValidos = [artista, ...otrosNombres, limpiarArtista(c.canal)].filter(Boolean);
+      nombresValidos = [cancion];
       // 1) LRCLIB con lo que sacamos del título de YouTube
       let encontrada = await lrclib([de(artista, cancion), ...otrosNombres.map(n => de(n, cancion)),
-        `q=${encodeURIComponent(artista + " " + cancion)}`, soloNombre], dura, i => i === soloNombre);
+        `q=${encodeURIComponent(artista + " " + cancion)}`], dura);
       if (encontrada?.syncedLyrics) return encontrada;
       // 2) Le pedimos a Deezer el nombre exacto y volvemos a probar en LRCLIB
       const exacto = await nombreExacto(artista, cancion);
       if (exacto && normalizar(exacto.artista + exacto.cancion) !== normalizar(artista + cancion)) {
-        const otra = await lrclib([de(exacto.artista, exacto.cancion), `q=${encodeURIComponent(exacto.artista + " " + exacto.cancion)}`], dura, () => false);
+        nombresValidos.push(exacto.cancion);
+        const otra = await lrclib([de(exacto.artista, exacto.cancion)], dura);
         if (otra?.syncedLyrics || (otra && !encontrada)) encontrada = otra;
-        if (encontrada?.syncedLyrics) return encontrada;
       }
-      if (encontrada) return encontrada;   // LRCLIB la tiene, aunque sin tiempos
-      // 3) Segunda página: Lyrics.ovh (solo texto)
-      if (exacto) { const x = await lyricsOvh(exacto.artista, exacto.cancion); if (x) return x; }
-      for (const nombre of [artista, ...otrosNombres]) { const x = await lyricsOvh(nombre, cancion); if (x) return x; }
-      return "nada";
+      return encontrada || "nada";
     }
 
     // Letra SIN tiempos → le calculamos tiempos aproximados.

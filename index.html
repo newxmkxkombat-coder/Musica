@@ -687,7 +687,10 @@
       if (n === activo) {
         // El que suena: si termina, siguiente; si empieza a sonar, precargamos la que viene
         if (estado === E.ENDED) siguiente();
-        if (estado === E.PLAYING) precargarSiguiente();
+        if (estado === E.PLAYING) { precargarSiguiente(); silencio.play().catch(() => {}); }
+        if (estado === E.PAUSED) silencio.pause();
+        if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
+          navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
         const btn = document.getElementById("btnPlay");
         const icono = estado === E.PLAYING ? "⏸" : "▶";
         if (btn.textContent !== icono) {
@@ -749,11 +752,51 @@
       document.getElementById("infoCanal").textContent = c.canal;
       document.title = "▶ " + c.titulo;
       document.getElementById("sonandoAhora").classList.add("visible");
+      actualizarNotificacion(c);
       // Portada en grande (hqdefault es la imagen más grande)
       document.getElementById("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
       // Marcamos en verde la que suena
       document.querySelectorAll(".cancion").forEach((f, j) => f.classList.toggle("sonando", j === i && document.querySelectorAll(".cancion").length === cola.length));
     }
+    // =====================================================================
+    // 7) CONTROLES EN LA NOTIFICACIÓN DEL MÓVIL (⏮ ⏯ ⏭)
+    // =====================================================================
+    // "Media Session" es la forma de decirle al móvil qué suena y qué hacer
+    // con los botones de la notificación. Pero el móvil solo nos hace caso si
+    // NUESTRA página está sonando (no solo el vídeo de YouTube de dentro).
+    // Truco: reproducimos un audio de silencio en bucle mientras suena la música.
+    const silencio = new Audio(crearSilencio());
+    silencio.loop = true;
+
+    // Crea 1 segundo de silencio como archivo de audio WAV, sin descargar nada
+    function crearSilencio() {
+      const muestras = 8000, datos = new DataView(new ArrayBuffer(44 + muestras * 2));
+      const texto = (pos, t) => [...t].forEach((l, i) => datos.setUint8(pos + i, l.charCodeAt(0)));
+      texto(0, "RIFF"); datos.setUint32(4, 36 + muestras * 2, true); texto(8, "WAVE");
+      texto(12, "fmt "); datos.setUint32(16, 16, true); datos.setUint16(20, 1, true); datos.setUint16(22, 1, true);
+      datos.setUint32(24, 8000, true); datos.setUint32(28, 16000, true); datos.setUint16(32, 2, true); datos.setUint16(34, 16, true);
+      texto(36, "data"); datos.setUint32(40, muestras * 2, true);
+      return URL.createObjectURL(new Blob([datos], { type: "audio/wav" }));
+    }
+
+    function actualizarNotificacion(c) {
+      if (!("mediaSession" in navigator)) return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: c.titulo,
+        artist: c.canal,
+        album: "Mi Música",
+        artwork: [{ src: `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`, sizes: "480x360", type: "image/jpeg" }]
+      });
+    }
+
+    if ("mediaSession" in navigator) {
+      const accion = (nombre, hacer) => { try { navigator.mediaSession.setActionHandler(nombre, hacer); } catch {} };
+      accion("play", () => reproductor?.playVideo());
+      accion("pause", () => reproductor?.pauseVideo());
+      accion("nexttrack", () => siguiente());
+      accion("previoustrack", () => anterior());
+    }
+
     function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
     function anterior()  { if (posicion > 0) tocar(posicion - 1); }
 

@@ -895,7 +895,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "25 · 31 oct";
+    const VERSION = "26 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1398,9 +1398,14 @@
 
     // Coloca el reproductor justo encima del hueco de la portada (o lo vuelve a esconder)
     let esperaVideo = null;
+    let pantallaEstabaAbierta = false;
     function colocarVideo() {
+      // Solo hacemos algo si la pantalla CAMBIÓ (abierta ↔ cerrada); si no, saldríamos en bucle
+      const abierta = $("pantalla").classList.contains("abierta");
+      if (abierta === pantallaEstabaAbierta) return;
+      pantallaEstabaAbierta = abierta;
       clearTimeout(esperaVideo);
-      if (!$("pantalla").classList.contains("abierta")) {
+      if (!abierta) {
         $("video").classList.remove("enPantalla");      // vuelve a su escondite
         $("pantalla").classList.remove("videoDetras");
         return;

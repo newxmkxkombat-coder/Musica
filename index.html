@@ -21,15 +21,13 @@
     :root {
       --fondo: #0b0b0c;          /* negro casi puro, el fondo de todo */
       --panel: #151517;          /* tarjetas y paneles */
-      --tarjeta: #1f1f22;        /* cosas un poco más claras */
-      --hover: #2a2a2e;          /* al pasar el dedo/ratón */
+      --tarjeta: #242427;        /* cosas un poco más claras */
       --borde: #ffffff14;        /* bordes finitos y transparentes */
       --texto: #f5f5f7;
-      --gris: #a1a1aa;
+      --gris: #a7a7ad;
       --gris2: #6b6b73;
       --verde: #1ed760;
-      --verde2: #17b84f;
-      --radio: 12px;
+      --radio: 10px;
       --fuente: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
       color-scheme: dark;
     }
@@ -42,116 +40,108 @@
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
       display: grid;
-      grid-template-columns: 260px 1fr;   /* barra lateral + contenido */
-      grid-template-rows: 1fr auto;       /* contenido + barra del reproductor */
+      grid-template-columns: 250px 1fr;
+      grid-template-rows: 1fr auto;
+      grid-template-areas: "menu contenido" "mini mini";
       gap: 8px;
       padding: 8px;
       overflow: hidden;
     }
     button { font-family: inherit; }
     img { display: block; }
+    [hidden] { display: none !important; }
 
     /* ----- Iconos (dibujos SVG) ----- */
     .ic { width: 20px; height: 20px; fill: currentColor; flex: none; }
-    .ic.linea { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     /* ----- Botones: sin el marco azul y con animación al pulsar ----- */
-    button, a, .cancion, .carpeta, .sug { -webkit-tap-highlight-color: transparent; }
+    button, a, .cancion, .carpeta, .sug, .tile, .tarjetaRec, #mini { -webkit-tap-highlight-color: transparent; }
     button:focus { outline: none; }
     button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }   /* solo con teclado */
-    button { transition: transform .12s ease, background-color .15s ease, color .15s ease, filter .15s ease; }
+    button { transition: transform .12s ease, background-color .15s ease, color .15s ease; }
     button:active { transform: scale(.9); }
-    .cancion, .carpeta { transition: transform .12s ease, background-color .15s ease; }
-    .cancion:active, .carpeta:active { transform: scale(.985); }
+    .cancion, .carpeta, .tile, .tarjetaRec { transition: transform .12s ease, background-color .15s ease; }
+    .cancion:active, .carpeta:active, .tile:active, .tarjetaRec:active { transform: scale(.97); }
     @keyframes latido { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
     .latido { animation: latido .28s ease; }
-    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
-    .pop { animation: pop .3s ease; }
     @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 
-    /* Botón verde principal y botón "fantasma" con borde */
     .boton {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--verde); color: #000; border: none; border-radius: 999px;
       padding: 11px 20px; font-weight: 700; font-size: 14px; cursor: pointer;
-      box-shadow: 0 6px 18px #1ed76033;
     }
-    .boton:hover { background: #3be477; }
-    .boton.gris { background: transparent; color: var(--texto); border: 1px solid #ffffff2e; box-shadow: none; }
-    .boton.gris:hover { border-color: var(--texto); }
+    .boton.gris { background: transparent; color: var(--texto); border: 1px solid #ffffff2e; }
     .iconoBoton {
       display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
       background: none; border: none; color: var(--gris); cursor: pointer;
     }
-    .iconoBoton:hover { color: var(--texto); background: #ffffff0f; }
+    .iconoBoton:hover { color: var(--texto); }
 
-    /* ----- Barra lateral (izquierda) ----- */
-    aside {
-      background: var(--panel); border-radius: var(--radio); border: 1px solid var(--borde);
+    /* ===================== MENÚ (izquierda en ordenador, abajo en móvil) ===================== */
+    nav {
+      grid-area: menu; background: var(--panel); border-radius: var(--radio);
       padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 0;
     }
-    .marca { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; margin: 0 8px 20px; letter-spacing: -.3px; }
+    .marca { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; margin: 0 8px 20px; }
     .marca span { color: var(--verde); }
-    .logo { width: 34px; height: 34px; filter: drop-shadow(0 4px 10px #1ed76055); }
+    .logo { width: 34px; height: 34px; }
     .menu {
       display: flex; align-items: center; gap: 14px;
       background: none; border: none; color: var(--gris); text-align: left; padding: 11px 12px;
-      border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; position: relative;
+      border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer;
     }
-    .menu:hover { color: var(--texto); }
-    .menu.activo { color: var(--texto); background: var(--tarjeta); }
-    .menu.activo::before {   /* rayita verde a la izquierda del menú activo */
-      content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--verde);
-    }
-    .menu .ic { width: 22px; height: 22px; }
+    .menu:hover, .menu.activo { color: var(--texto); }
+    .menu .ic { width: 24px; height: 24px; }
+    .menu .lleno { display: none; }                 /* icono relleno cuando está activo */
+    .menu.activo .lleno { display: block; }
+    .menu.activo .vacio { display: none; }
+    .linkClave { margin-top: auto; background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px 12px; text-align: left; }
 
-    .sonandoAhora { margin-top: auto; display: none; padding: 12px; border-radius: 10px; background: var(--tarjeta); border: 1px solid var(--borde); }
-    .sonandoAhora.visible { display: block; }
-    .sonandoAhora p { color: var(--gris); font-size: 11px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.2px; }
-    .linkClave { background: none; border: none; color: var(--gris); font-size: 12px; cursor: pointer; padding: 8px 12px; text-align: left; }
-    .linkClave:hover { color: var(--texto); }
-    .linkClave[hidden] { display: none; }
-
-    /* El vídeo se recorta en un cuadrado para que parezca la portada de un disco.
-       YouTube pide que su reproductor se vea (mínimo 200x200). */
-    #video { position: relative; width: 200px; height: 200px; margin: 0 auto;
-             border-radius: 10px; overflow: hidden; background: #000; box-shadow: 0 12px 32px #000a; }
-    #video iframe { position: absolute; top: 0; left: 50%; width: 356px; height: 200px; transform: translateX(-50%); }
-    #video iframe.dormido { opacity: 0; pointer-events: none; }   /* los reproductores que precargan */
-    /* Portada: la imagen de la canción tapa el vídeo (modo "solo música") */
-    #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-    #video.conVideo #portada { display: none; }
-    #btnVideo {
-      position: absolute; right: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
-      border: 1px solid #ffffff26; cursor: pointer; background: #000000b3; backdrop-filter: blur(8px);
-      color: var(--texto); font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
-    }
-    #btnVideo .ic { width: 14px; height: 14px; }
-
-    /* ----- Contenido principal ----- */
+    /* ===================== CONTENIDO ===================== */
     main {
-      overflow-y: auto; padding: 20px 28px 32px; border-radius: var(--radio); border: 1px solid var(--borde);
-      background: linear-gradient(180deg, #1c3a28 0%, var(--panel) 260px);   /* brillo verde arriba */
+      grid-area: contenido; overflow-y: auto; padding: 20px 24px 32px; border-radius: var(--radio);
+      background: linear-gradient(180deg, #1d3b29 0%, var(--panel) 280px);
       min-width: 0;
     }
-    .buscador { margin-bottom: 24px; max-width: 520px; position: relative; }
-    .buscador .ic { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gris); pointer-events: none; }
-    .buscador input {
-      width: 100%; padding: 14px 18px 14px 48px; border-radius: 999px; border: 1px solid transparent;
-      background: #ffffff12; color: var(--texto); font-size: 15px; font-family: inherit;
-      transition: background-color .15s, border-color .15s;
-    }
-    .buscador input::placeholder { color: var(--gris); }
-    .buscador input:hover { background: #ffffff1a; }
-    .buscador input:focus { outline: none; border-color: #ffffffcc; background: #ffffff1a; }
     h2 { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 16px; text-wrap: balance; }
+    h2:empty { display: none; }
     .aviso { color: var(--gris); padding: 20px 0; line-height: 1.6; }
 
-    /* Cajita de sugerencias que sale debajo del buscador */
+    /* ----- Inicio ----- */
+    .saludo { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 16px; }
+    .accesos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; margin-bottom: 28px; }
+    @media (max-width: 700px) { .accesos { grid-template-columns: 1fr 1fr; } }
+    .tile {
+      display: flex; align-items: center; gap: 10px; height: 56px; padding-right: 8px; border-radius: 6px; overflow: hidden;
+      background: #ffffff14; cursor: pointer; font-weight: 700; font-size: 13px; min-width: 0;
+    }
+    .tile:hover { background: #ffffff24; }
+    .tile .tapa { width: 56px; height: 56px; aspect-ratio: auto; margin: 0; border-radius: 0; box-shadow: 4px 0 12px #0006; flex: none; }
+    .tile .tapa .ic { width: 22px; height: 22px; }
+    .tile span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+    .seccion { margin-bottom: 28px; }
+    .seccion h3 { font-size: 21px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 12px; }
+    .fila { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: none; }
+    .fila::-webkit-scrollbar { display: none; }
+    .tarjetaRec { flex: 0 0 140px; scroll-snap-align: start; cursor: pointer; min-width: 0; }
+    .tarjetaRec img { width: 140px; height: 140px; object-fit: cover; border-radius: 6px; background: var(--tarjeta); box-shadow: 0 8px 20px #0007; margin-bottom: 8px; }
+    .tarjetaRec .titulo { font-size: 14px; }
+    .esqueleto { background: linear-gradient(90deg, #ffffff0d, #ffffff1a, #ffffff0d); background-size: 200% 100%; animation: brillo 1.2s infinite; }
+    @keyframes brillo { to { background-position: -200% 0; } }
+
+    /* ----- Buscador ----- */
+    .buscador { margin-bottom: 24px; max-width: 520px; position: relative; }
+    .buscador > .ic { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #000; pointer-events: none; }
+    .buscador input {
+      width: 100%; padding: 14px 18px 14px 48px; border-radius: 8px; border: none;
+      background: #fff; color: #000; font-size: 15px; font-weight: 600; font-family: inherit;
+    }
+    .buscador input::placeholder { color: #555; font-weight: 500; }
+    .buscador input:focus { outline: none; }
     .sugerencias { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 5;
-                   background: #232326f2; backdrop-filter: blur(16px); border: 1px solid var(--borde);
+                   background: #232326f5; backdrop-filter: blur(16px); border: 1px solid var(--borde);
                    border-radius: 12px; padding: 6px; box-shadow: 0 16px 40px #000c; max-height: 60vh; overflow-y: auto; }
-    .sugerencias[hidden] { display: none; }
     .sugerencias h4 { color: var(--gris); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; padding: 10px 10px 4px; }
     .sug { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; min-width: 0; }
     .sug:hover { background: #ffffff12; }
@@ -161,21 +151,19 @@
 
     /* ----- Lista de canciones ----- */
     .cancion {
-      display: grid; grid-template-columns: 28px 48px 1fr auto; gap: 14px;
-      align-items: center; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+      display: grid; grid-template-columns: 24px 48px 1fr auto; gap: 12px;
+      align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer;
     }
     .cancion:hover { background: #ffffff0d; }
-    .cancion img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; background: var(--tarjeta); box-shadow: 0 4px 12px #0006; }
+    .cancion img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; background: var(--tarjeta); }
     .cancion .num { color: var(--gris); text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
     .titulo { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .canal { color: var(--gris); font-size: 13px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cancion.sonando .titulo, .cancion.sonando .num { color: var(--verde); }
-    .corazon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: none; border: none; cursor: pointer; color: var(--gris); }
+    .corazon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: none; border: none; cursor: pointer; color: var(--gris); flex: none; }
     .corazon:hover { color: var(--texto); }
     .corazon.lleno { color: var(--verde); }
     .corazon .ic { width: 22px; height: 22px; }
-
-    /* Barras animadas que salen en la canción que suena */
     .ecualizador { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
     .ecualizador i { width: 3px; background: var(--verde); border-radius: 1px; animation: barra 0.9s ease-in-out infinite; }
     .ecualizador i:nth-child(2) { animation-delay: -.3s; } .ecualizador i:nth-child(3) { animation-delay: -.6s; }
@@ -183,13 +171,14 @@
 
     /* ----- Biblioteca: carpetas ----- */
     .carpetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
-    .carpeta { background: #ffffff08; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; cursor: pointer; min-width: 0; }
-    .carpeta:hover { background: #ffffff12; }
+    .carpeta { border-radius: var(--radio); padding: 10px; cursor: pointer; min-width: 0; }
+    .carpeta:hover { background: #ffffff0d; }
     .tapa {
-      width: 100%; aspect-ratio: 1; border-radius: 8px; margin-bottom: 12px; object-fit: cover;
-      background: linear-gradient(135deg, #2ee86f, #0f5f2c); display: grid; place-items: center; color: #fff;
+      width: 100%; aspect-ratio: 1; border-radius: 6px; margin-bottom: 10px; object-fit: cover;
+      background: linear-gradient(135deg, #5b3df5, #9fe0c4); display: grid; place-items: center; color: #fff;
       box-shadow: 0 8px 24px #0008;
     }
+    .tapa.nota { background: linear-gradient(135deg, #2ee86f, #0f5f2c); }
     .tapa .ic { width: 44px; height: 44px; }
     .nuevaCarpeta { display: flex; gap: 8px; margin-bottom: 20px; max-width: 520px; }
     .nuevaCarpeta input, .bienvenida input {
@@ -197,40 +186,37 @@
       background: #ffffff12; color: var(--texto); font-family: inherit; font-size: 14px;
     }
     .nuevaCarpeta input:focus, .bienvenida input:focus { outline: none; border-color: #ffffffaa; }
-
-    /* Cabecera de una carpeta (portada grande + nombre) */
     .cabCarpeta { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; }
     .cabCarpeta .tapa { width: 150px; margin: 0; flex: none; }
     .cabCarpeta small { color: var(--gris); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
-    .cabCarpeta h3 { font-size: 32px; font-weight: 800; letter-spacing: -.8px; line-height: 1.1; margin: 4px 0 6px; text-wrap: balance; }
+    .cabCarpeta h3 { font-size: 30px; font-weight: 800; letter-spacing: -.8px; line-height: 1.1; margin: 4px 0 6px; text-wrap: balance; }
     .acciones { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
     .botonPlayGrande {
       display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
-      background: var(--verde); color: #000; box-shadow: 0 8px 24px #1ed76055;
+      background: var(--verde); color: #000; box-shadow: 0 8px 24px #1ed76044;
     }
-    .botonPlayGrande:hover { background: #3be477; transform: scale(1.05); }
     .botonPlayGrande .ic { width: 26px; height: 26px; }
     .acciones .iconoBoton .ic { width: 24px; height: 24px; }
     .acciones .borrar.seguro { color: #ff5c5c; width: auto; padding: 0 12px; border-radius: 999px; font-weight: 700; gap: 6px; display: inline-flex; }
 
     /* ----- Hoja "Guardar en carpeta" (sale desde abajo) ----- */
-    .fondoHoja { position: fixed; inset: 0; background: #000b; backdrop-filter: blur(4px); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
-    .fondoHoja[hidden] { display: none; }
+    .fondoHoja { position: fixed; inset: 0; background: #000b; z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
     @keyframes subir { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
     .hoja {
-      background: #1d1d20; width: 100%; max-width: 480px; border-radius: 20px 20px 0 0; border: 1px solid var(--borde);
+      background: #1d1d20; width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
       padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 80vh; overflow-y: auto; animation: subir .22s ease;
     }
     .hoja .agarre { width: 40px; height: 4px; border-radius: 2px; background: #ffffff33; margin: 0 auto 16px; }
     .hoja h3 { font-size: 18px; font-weight: 800; }
     .hoja .canal { margin-bottom: 14px; }
     .opcionCarpeta {
-      display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; text-align: left;
+      display: flex; gap: 12px; align-items: center; width: 100%; padding: 8px; text-align: left;
       background: none; border: none; color: var(--texto); font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 8px;
     }
     .opcionCarpeta:hover { background: #ffffff0f; }
-    .opcionCarpeta .mini { width: 40px; height: 40px; border-radius: 6px; flex: none; object-fit: cover;
-                           background: linear-gradient(135deg, #2ee86f, #0f5f2c); display: grid; place-items: center; color: #fff; }
+    .opcionCarpeta .mini { width: 44px; height: 44px; border-radius: 4px; flex: none; object-fit: cover;
+                           background: linear-gradient(135deg, #5b3df5, #9fe0c4); display: grid; place-items: center; color: #fff; }
+    .opcionCarpeta .mini.nota { background: linear-gradient(135deg, #2ee86f, #0f5f2c); }
     .opcionCarpeta .mini .ic { width: 18px; height: 18px; }
     .opcionCarpeta .nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .opcionCarpeta .check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--gris2); display: grid; place-items: center; flex: none; }
@@ -239,97 +225,132 @@
     .hoja .nuevaCarpeta { margin: 14px 0 12px; }
     .hoja .boton.gris { width: 100%; justify-content: center; }
 
-    /* Aviso "Ábrela en Brave" (solo sale si NO estás en Brave) */
+    /* Aviso "Ábrela en Brave" y tarjeta de bienvenida */
     .avisoBrave { background: linear-gradient(135deg, #fb542b, #e0337a); color: #fff; border-radius: var(--radio); padding: 14px 16px; margin-bottom: 20px;
-                  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; line-height: 1.4; box-shadow: 0 8px 24px #fb542b33; }
-    .avisoBrave[hidden] { display: none; }
+                  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; line-height: 1.4; }
     .avisoBrave p { flex: 1 1 220px; }
     .avisoBrave a { background: #fff; color: #000; font-weight: 700; text-decoration: none; padding: 10px 18px; border-radius: 999px; white-space: nowrap; }
     .avisoBrave button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 12px; }
-
-    /* Tarjeta de bienvenida (para pegar la clave la primera vez) */
     .bienvenida { background: #ffffff0a; border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; max-width: 540px; line-height: 1.6; }
     .bienvenida h3 { margin-bottom: 8px; font-size: 18px; }
     .bienvenida ol { margin: 8px 0 14px 20px; color: var(--gris); }
     .bienvenida a { color: var(--verde); }
-    .bienvenida .fila { display: flex; gap: 8px; }
-
-    /* ----- Barra del reproductor (abajo) ----- */
-    footer {
-      grid-column: 1 / 3; background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
-      display: grid; grid-template-columns: 1fr minmax(0, 1.4fr) 1fr; align-items: center; padding: 12px 16px; gap: 16px;
-      position: relative;
-    }
-    .info { display: flex; gap: 12px; align-items: center; min-width: 0; }
-    .info img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--tarjeta); box-shadow: 0 6px 16px #0008; flex: none; }
-    .info > div { min-width: 0; }
-    .controles { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
-    .controles .botones { display: flex; gap: 18px; align-items: center; }
-    .controles .iconoBoton { color: #d4d4d8; }
-    .controles .iconoBoton:hover { color: #fff; }
-    .controles .iconoBoton .ic { width: 22px; height: 22px; }
-    #btnPlay {
-      display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
-      background: #fff; color: #000; box-shadow: 0 4px 14px #0008, inset 0 -2px 0 #0000001a;
-    }
-    #btnPlay:hover { transform: scale(1.06); }
-    #btnPlay:active { transform: scale(.9); }
-    #btnPlay .ic { width: 22px; height: 22px; }
-    .progreso { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; font-size: 11px; color: var(--gris); font-variant-numeric: tabular-nums; }
-    .progreso span { width: 36px; text-align: center; }
+    .bienvenida .fila { display: flex; gap: 8px; overflow: visible; }
 
     /* Barras deslizantes (progreso y volumen) hechas a mano para que se vean finas */
-    input[type=range] {
-      --pct: 0%;
-      flex: 1; height: 16px; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; min-width: 0;
-    }
-    input[type=range]::-webkit-slider-runnable-track {
-      height: 4px; border-radius: 4px;
-      background: linear-gradient(to right, #fff var(--pct), #ffffff33 var(--pct));
-    }
-    input[type=range]:hover::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--verde) var(--pct), #ffffff33 var(--pct)); }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: #fff;
-      box-shadow: 0 2px 6px #0008; opacity: 0; transition: opacity .15s;
-    }
-    input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { opacity: 1; }
+    input[type=range] { --pct: 0%; flex: 1; height: 16px; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; min-width: 0; }
+    input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, #fff var(--pct), #ffffff33 var(--pct)); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px #0008; }
     input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: #ffffff33; }
     input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: #fff; }
     input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: #fff; }
     input[type=range]:focus { outline: none; }
-    .volumen { display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: var(--gris); }
-    .volumen input { max-width: 120px; }
 
-    /* ===== MÓVIL ===== */
+    /* ===================== MINI REPRODUCTOR (abajo) ===================== */
+    #mini {
+      grid-area: mini; position: relative; background: var(--panel); border-radius: var(--radio);
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; gap: 16px; padding: 10px 14px;
+    }
+    #mini .info { display: flex; gap: 12px; align-items: center; min-width: 0; cursor: pointer; }
+    #mini .info img { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--tarjeta); flex: none; }
+    #mini .info > div { min-width: 0; }
+    .controles { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+    .botones { display: flex; gap: 18px; align-items: center; justify-content: center; }
+    .botones .iconoBoton { color: #e4e4e7; }
+    .botones .iconoBoton .ic { width: 22px; height: 22px; }
+    .btnPlay { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; background: #fff; color: #000; flex: none; }
+    .btnPlay .ic { width: 20px; height: 20px; }
+    .progreso { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 560px; font-size: 11px; color: var(--gris); font-variant-numeric: tabular-nums; }
+    .progreso span { width: 36px; text-align: center; }
+    .derecha { display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: var(--gris); }
+    .derecha input { max-width: 110px; }
+    .soloMovil { display: none !important; }
+    .rayita { display: none; }
+
+    /* ===================== PANTALLA "REPRODUCIENDO" (se abre al tocar el mini) ===================== */
+    #pantalla {
+      position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(180deg, #2b4a36 0%, #121214 70%);
+      transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1); overflow-y: auto;
+    }
+    /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
+    #pantalla.abierta { transform: none; }
+    .barraArriba { width: 100%; max-width: 440px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .barraArriba small { display: block; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #ffffffb3; }
+    .barraArriba b { display: block; text-align: center; font-size: 13px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .barraArriba .iconoBoton { color: var(--texto); }
+    .barraArriba .iconoBoton .ic { width: 26px; height: 26px; }
+    .grande { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px; }
+    /* La portada (y el vídeo si lo pides). YouTube pide que su reproductor se vea. */
+    #video { position: relative; width: 100%; aspect-ratio: 1; max-height: 52vh; max-width: 52vh; margin: 0 auto;
+             border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 20px 50px #000b; }
+    /* Truco de velocidad: YouTube elige la calidad según el TAMAÑO del reproductor.
+       En "solo música" lo dejamos pequeñito (escondido detrás de la portada), así
+       carga un vídeo de baja calidad: menos datos y suena antes. */
+    #video iframe { position: absolute; top: 50%; left: 50%; width: 356px; height: 200px; transform: translate(-50%, -50%); }
+    #video.conVideo iframe { width: 178%; height: 100%; }
+    #video iframe.dormido { opacity: 0; pointer-events: none; }
+    #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+    #video.conVideo #portada { display: none; }
+    #btnVideo {
+      position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid #ffffff26; cursor: pointer; background: #000000b3; backdrop-filter: blur(8px);
+      color: var(--texto); font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+    }
+    #btnVideo .ic { width: 14px; height: 14px; }
+    .nombreGrande { display: flex; align-items: center; gap: 12px; }
+    .nombreGrande > div { flex: 1; min-width: 0; }
+    .nombreGrande .titulo { font-size: 22px; font-weight: 800; }
+    .nombreGrande .canal { font-size: 15px; }
+    .nombreGrande .corazon .ic { width: 26px; height: 26px; }
+    .grande .progreso { max-width: none; flex-wrap: wrap; justify-content: space-between; gap: 4px; }
+    .grande .progreso input { flex: 1 0 100%; }
+    .grande .progreso span { width: auto; }
+    .grande .botones { gap: 36px; }
+    .grande .botones .iconoBoton { width: 52px; height: 52px; }
+    .grande .botones .iconoBoton .ic { width: 32px; height: 32px; }
+    .grande .btnPlay { width: 66px; height: 66px; }
+    .grande .btnPlay .ic { width: 30px; height: 30px; }
+
+    /* ===================== MÓVIL ===================== */
     @media (max-width: 700px) {
       body {
-        grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; gap: 0; padding: 0;
-        padding-top: env(safe-area-inset-top, 0px);
+        grid-template-columns: 1fr; grid-template-rows: 1fr auto auto;
+        grid-template-areas: "contenido" "mini" "menu";
+        gap: 0; padding: 0; padding-top: env(safe-area-inset-top, 0px);
       }
-      aside { flex-direction: row; flex-wrap: wrap; padding: 10px 16px; align-items: center; border-radius: 0; border: none; border-bottom: 1px solid var(--borde); gap: 6px; }
-      .marca { display: none; }
-      .menu { padding: 8px 14px; font-size: 14px; border-radius: 999px; background: var(--tarjeta); gap: 8px; }
-      .menu.activo { background: var(--verde); color: #000; }
-      .menu.activo::before { display: none; }
-      .menu .ic { width: 18px; height: 18px; }
-      .linkClave { margin-left: auto; }
-      .sonandoAhora.visible { flex-basis: 100%; order: 3; margin: 8px 0 2px; background: none; border: none; padding: 0; }
-      .sonandoAhora p { display: none; }
-      main { padding: 16px; border-radius: 0; border: none; }
-      h2 { font-size: 21px; }
-      .cancion { grid-template-columns: 22px 44px 1fr auto; gap: 12px; padding: 6px 4px; }
+      main { padding: 16px 16px 24px; border-radius: 0; }
+      /* El menú pasa abajo, con iconos encima del texto, como Spotify */
+      nav {
+        flex-direction: row; justify-content: space-around; padding: 8px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0; background: linear-gradient(180deg, #0b0b0ce6, #000); gap: 0;
+      }
+      .marca, .linkClave { display: none; }
+      .menu { flex-direction: column; gap: 4px; padding: 4px 12px; font-size: 11px; font-weight: 600; flex: 1; align-items: center; }
+      .menu .ic { width: 26px; height: 26px; }
+      .menu:active { transform: scale(.9); }
+      /* Mini reproductor pequeñito, como el de Spotify */
+      #mini {
+        grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin: 0 8px 4px; padding: 8px 8px 10px 8px;
+        background: #26332b; border-radius: 8px; box-shadow: 0 -4px 20px #0007;
+      }
+      #mini .info { gap: 10px; }
+      #mini .info img { width: 40px; height: 40px; border-radius: 4px; }
+      #mini .titulo { font-size: 14px; } #mini .canal { font-size: 13px; margin-top: 0; }
+      #mini .controles, #mini .derecha > .ic, #mini .derecha input { display: none; }
+      #mini .derecha { gap: 2px; }
+      .soloMovil { display: grid !important; }
+      #mini .btnPlay { background: none; color: var(--texto); width: 40px; height: 40px; }
+      #mini .btnPlay .ic { width: 26px; height: 26px; }
+      /* La rayita de progreso pegada abajo del mini reproductor */
+      .rayita { display: block; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; border-radius: 2px; background: #ffffff33; overflow: hidden; }
+      .rayita i { display: block; height: 100%; width: 0; background: #fff; }
+      .cancion { grid-template-columns: 22px 44px 1fr auto; gap: 12px; padding: 6px 2px; }
       .cancion img { width: 44px; height: 44px; }
-      .cabCarpeta .tapa { width: 110px; }
+      .cabCarpeta .tapa { width: 120px; }
       .cabCarpeta h3 { font-size: 24px; }
-      /* El reproductor de abajo pasa a ser una tarjeta tipo "mini reproductor" */
-      footer {
-        grid-column: 1; grid-template-columns: 1fr; gap: 6px; margin: 0 8px 8px;
-        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-        background: #1d1d20; box-shadow: 0 -8px 24px #0008;
-      }
-      .info img { width: 48px; height: 48px; }
-      .volumen { display: none; }
-      .controles .botones { gap: 28px; }
+      .buscador { margin-bottom: 18px; }
     }
   </style>
 </head>
@@ -343,11 +364,16 @@
     <symbol id="i-anterior" viewBox="0 0 24 24"><path transform="translate(24 0) scale(-1 1)" d="M5 6.2v11.6a1 1 0 0 0 1.55.83L15 13v4.8a1 1 0 0 0 1 1h1.2a1 1 0 0 0 1-1V6.2a1 1 0 0 0-1-1H16a1 1 0 0 0-1 1V11L6.55 5.37A1 1 0 0 0 5 6.2z"/></symbol>
     <symbol id="i-corazon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 20s-7.2-4.3-9.1-8.8C1.5 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.4 4.1 6.7C19.2 15.7 12 20 12 20z"/></symbol>
     <symbol id="i-corazonLleno" viewBox="0 0 24 24"><path d="M12 20s-7.2-4.3-9.1-8.8C1.5 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.5 3.4 4.1 6.7C19.2 15.7 12 20 12 20z"/></symbol>
+    <symbol id="i-inicio" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 10.5 12 4l8 6.5V20h-5.5v-5.5h-5V20H4z"/></symbol>
+    <symbol id="i-inicioLleno" viewBox="0 0 24 24"><path d="M3.4 9.7 11.4 3.2a1 1 0 0 1 1.2 0l8 6.5a1 1 0 0 1 .4.8V20a1 1 0 0 1-1 1h-5.5a1 1 0 0 1-1-1v-4.5h-3V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 .4-.8z"/></symbol>
     <symbol id="i-buscar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></g></symbol>
+    <symbol id="i-buscarLleno" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15.5 15.5 20 20"/></g></symbol>
     <symbol id="i-biblioteca" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 4v16M10 4v16M14.5 4.5l5 15"/></g></symbol>
+    <symbol id="i-bibliotecaLleno" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 4v16M10 4v16M14.5 4.5l5 15"/></g></symbol>
     <symbol id="i-aleatorio" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c4.5 0 6.5 10 11 10H21M3 17h3.5c1.8 0 3.1-1.6 4.2-3.5M13.3 10.5C14.4 8.6 15.7 7 17.5 7H21M18 4l3 3-3 3M18 14l3 3-3 3"/></g></symbol>
     <symbol id="i-basura" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></g></symbol>
     <symbol id="i-atras" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-abajo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></symbol>
     <symbol id="i-mas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-nota" viewBox="0 0 24 24"><path d="M9 17.5V6.2a1 1 0 0 1 .76-.97l9-2.25A1 1 0 0 1 20 4v11.5a3 3 0 1 1-2-2.83V7.3l-7 1.75v8.45a3 3 0 1 1-2-2.83z"/></symbol>
@@ -355,14 +381,70 @@
     <symbol id="i-volumen" viewBox="0 0 24 24"><path d="M4 9.5v5a1 1 0 0 0 1 1h3l4.4 3.7a1 1 0 0 0 1.6-.8V5.6a1 1 0 0 0-1.6-.8L8 8.5H5a1 1 0 0 0-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M17 9a4.5 4.5 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></symbol>
   </svg>
 
-  <!-- ===== BARRA LATERAL ===== -->
-  <aside>
+  <!-- ===== MENÚ: a la izquierda en el ordenador, abajo en el móvil ===== -->
+  <nav>
     <div class="marca"><img src="iconos/logo.svg" alt="" class="logo"> Mi <span>Música</span></div>
-    <button class="menu activo" data-vista="buscar"><svg class="ic"><use href="#i-buscar"/></svg>Buscar</button>
-    <button class="menu" data-vista="biblioteca"><svg class="ic"><use href="#i-biblioteca"/></svg>Tu biblioteca</button>
-    <!-- Aquí aparece la portada (y el vídeo si lo pides) cuando suena algo -->
-    <div class="sonandoAhora" id="sonandoAhora">
-      <p>Sonando ahora</p>
+    <button class="menu activo" data-vista="inicio">
+      <svg class="ic vacio"><use href="#i-inicio"/></svg><svg class="ic lleno"><use href="#i-inicioLleno"/></svg>Inicio</button>
+    <button class="menu" data-vista="buscar">
+      <svg class="ic vacio"><use href="#i-buscar"/></svg><svg class="ic lleno"><use href="#i-buscarLleno"/></svg>Buscar</button>
+    <button class="menu" data-vista="biblioteca">
+      <svg class="ic vacio"><use href="#i-biblioteca"/></svg><svg class="ic lleno"><use href="#i-bibliotecaLleno"/></svg>Tu biblioteca</button>
+    <button class="linkClave" id="btnClave">⚙ Clave de YouTube</button>
+  </nav>
+
+  <!-- ===== CONTENIDO ===== -->
+  <main id="contenido">
+    <div class="avisoBrave" id="avisoBrave" hidden>
+      <p>🦁 <b>Para escuchar sin anuncios, abre esta app en Brave.</b><br>Si no lo tienes, el botón te lleva a instalarlo.</p>
+      <a id="enlaceBrave" href="https://brave.com/download/">Abrir en Brave</a>
+      <button id="cerrarAvisoBrave">Seguir sin Brave</button>
+    </div>
+    <!-- El buscador solo se ve en la pestaña "Buscar" -->
+    <form class="buscador" id="formBuscar" hidden>
+      <svg class="ic"><use href="#i-buscar"/></svg>
+      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off" enterkeyhint="search">
+      <div class="sugerencias" id="sugerencias" hidden></div>
+    </form>
+    <h2 id="tituloLista"></h2>
+    <div id="lista"></div>
+  </main>
+
+  <!-- ===== MINI REPRODUCTOR (abajo) ===== -->
+  <footer id="mini" hidden>
+    <div class="info" id="abrirPantalla">
+      <img class="tapaActual" alt="">
+      <div><div class="titulo nombreActual">Nada sonando</div><div class="canal artistaActual"></div></div>
+    </div>
+    <div class="controles">
+      <div class="botones">
+        <button class="iconoBoton" data-accion="anterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
+        <button class="btnPlay" data-accion="play" title="Play / Pausa"></button>
+        <button class="iconoBoton" data-accion="siguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
+      </div>
+      <div class="progreso">
+        <span class="tActual">0:00</span>
+        <input type="range" class="barraTiempo" min="0" max="1000" value="0">
+        <span class="tTotal">0:00</span>
+      </div>
+    </div>
+    <div class="derecha">
+      <button class="corazon corazonActual" title="Guardar en carpeta"></button>
+      <svg class="ic"><use href="#i-volumen"/></svg>
+      <input type="range" id="barraVolumen" min="0" max="100" value="80" style="--pct:80%">
+      <button class="btnPlay soloMovil" data-accion="play" title="Play / Pausa"></button>
+    </div>
+    <div class="rayita"><i id="rayita"></i></div>
+  </footer>
+
+  <!-- ===== PANTALLA "REPRODUCIENDO" (grande) ===== -->
+  <section id="pantalla" aria-label="Reproduciendo">
+    <div class="barraArriba">
+      <button class="iconoBoton" id="cerrarPantalla" title="Cerrar"><svg class="ic"><use href="#i-abajo"/></svg></button>
+      <div><small>Reproduciendo desde</small><b id="desde">Mi Música</b></div>
+      <span style="width:40px"></span>
+    </div>
+    <div class="grande">
       <div id="video">
         <!-- Tres reproductores: uno suena, otro guarda la anterior y otro carga la siguiente -->
         <div id="reproductorYT0"></div>
@@ -371,25 +453,22 @@
         <img id="portada" alt="">
         <button id="btnVideo"></button>
       </div>
+      <div class="nombreGrande">
+        <div><div class="titulo nombreActual"></div><div class="canal artistaActual"></div></div>
+        <button class="corazon corazonActual" title="Guardar en carpeta"></button>
+      </div>
+      <div class="progreso">
+        <input type="range" class="barraTiempo" min="0" max="1000" value="0">
+        <span class="tActual">0:00</span>
+        <span class="tTotal">0:00</span>
+      </div>
+      <div class="botones">
+        <button class="iconoBoton" data-accion="anterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
+        <button class="btnPlay" data-accion="play" title="Play / Pausa"></button>
+        <button class="iconoBoton" data-accion="siguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
+      </div>
     </div>
-    <button class="linkClave" id="btnClave">⚙ Clave de YouTube</button>
-  </aside>
-
-  <!-- ===== CONTENIDO ===== -->
-  <main>
-    <div class="avisoBrave" id="avisoBrave" hidden>
-      <p>🦁 <b>Para escuchar sin anuncios, abre esta app en Brave.</b><br>Si no lo tienes, el botón te lleva a instalarlo.</p>
-      <a id="enlaceBrave" href="https://brave.com/download/">Abrir en Brave</a>
-      <button id="cerrarAvisoBrave">Seguir sin Brave</button>
-    </div>
-    <form class="buscador" id="formBuscar">
-      <svg class="ic"><use href="#i-buscar"/></svg>
-      <input id="campoBuscar" placeholder="¿Qué quieres escuchar?" autocomplete="off" enterkeyhint="search">
-      <div class="sugerencias" id="sugerencias" hidden></div>
-    </form>
-    <h2 id="tituloLista">Buscar</h2>
-    <div id="lista"></div>
-  </main>
+  </section>
 
   <!-- ===== HOJA "GUARDAR EN CARPETA" ===== -->
   <div class="fondoHoja" id="fondoHoja" hidden>
@@ -406,32 +485,13 @@
     </div>
   </div>
 
-  <!-- ===== REPRODUCTOR ===== -->
-  <footer>
-    <div class="info">
-      <img id="infoImg" alt="">
-      <div><div class="titulo" id="infoTitulo">Nada sonando</div><div class="canal" id="infoCanal">Elige una canción</div></div>
-    </div>
-    <div class="controles">
-      <div class="botones">
-        <button class="iconoBoton" id="btnAnterior" title="Anterior"><svg class="ic"><use href="#i-anterior"/></svg></button>
-        <button id="btnPlay" title="Play / Pausa"><svg class="ic"><use href="#i-play"/></svg></button>
-        <button class="iconoBoton" id="btnSiguiente" title="Siguiente"><svg class="ic"><use href="#i-siguiente"/></svg></button>
-      </div>
-      <div class="progreso">
-        <span id="tiempoActual">0:00</span>
-        <input type="range" id="barraProgreso" min="0" max="1000" value="0" step="1">
-        <span id="tiempoTotal">0:00</span>
-      </div>
-    </div>
-    <div class="volumen"><svg class="ic"><use href="#i-volumen"/></svg><input type="range" id="barraVolumen" min="0" max="100" value="80" style="--pct:80%"></div>
-  </footer>
-
   <!-- Script oficial de YouTube: nos da el reproductor -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
-    // Pequeña ayuda para escribir iconos: icono("play") → <svg ...><use href="#i-play"></svg>
+    // Pequeñas ayudas
     function icono(nombre) { return `<svg class="ic"><use href="#i-${nombre}"/></svg>`; }
+    const $ = (id) => document.getElementById(id);
+    const todos = (sel) => document.querySelectorAll(sel);
 
     // =====================================================================
     // 1) DATOS: lo que la app "recuerda"
@@ -449,7 +509,9 @@
     // La primera vez, tus favoritos de antes pasan a la carpeta "Favoritos".
     let carpetas = leer("carpetas", null) ||
       [{ id: "fav", nombre: "Favoritos", canciones: leer("favoritos", []) }];
-    let cola = [];                           // canciones que se están mostrando
+    let historial = leer("historial", []);  // lo último que escuchaste (para el Inicio)
+    let cola = [];                           // la lista que está sonando
+    let nombreCola = "";                     // de dónde viene ("Favoritos", "Búsqueda"…)
     let posicion = -1;                       // cuál de la cola está sonando
     let reproductor = null;                  // el reproductor que está sonando ahora
     let jugadores = [];                      // los tres reproductores de YouTube
@@ -460,11 +522,10 @@
     // =====================================================================
     // 2) LA CLAVE DE YOUTUBE (para poder buscar)
     // =====================================================================
-    // Muestra una tarjeta para pegar la clave (solo hace falta una vez)
     function mostrarBienvenida() {
       cambiarVista("buscar", false);
-      document.getElementById("tituloLista").textContent = "¡Hola! 👋";
-      document.getElementById("lista").innerHTML = `
+      $("tituloLista").textContent = "¡Hola! 👋";
+      $("lista").innerHTML = `
         <div class="bienvenida">
           <h3>Un paso antes de buscar</h3>
           Para buscar canciones necesitas una clave gratis de YouTube:
@@ -477,25 +538,16 @@
             <input id="campoClave" placeholder="Pega tu clave aquí">
             <button class="boton" id="guardarClave">Guardar</button>
           </div>
-          <p class="aviso" style="padding:8px 0 0">Mientras tanto, puedes pegar un enlace de YouTube en el buscador.</p>
         </div>`;
-      document.getElementById("campoClave").value = leer("claveYT", "");
-      document.getElementById("guardarClave").onclick = () => {
-        guardar("claveYT", document.getElementById("campoClave").value.trim());
-        mostrarInicio();
+      $("campoClave").value = leer("claveYT", "");
+      $("guardarClave").onclick = () => {
+        guardar("claveYT", $("campoClave").value.trim());
+        $("btnClave").hidden = true;
+        cambiarVista("inicio");
       };
     }
-    document.getElementById("btnClave").onclick = mostrarBienvenida;
-
-    // Pantalla de inicio: si no hay clave, la pedimos; si hay, invitamos a buscar
-    function mostrarInicio() {
-      // El botón "⚙ Clave de YouTube" solo se ve mientras no tengas clave
-      document.getElementById("btnClave").hidden = !!leer("claveYT", "");
-      if (!leer("claveYT", "")) return mostrarBienvenida();
-      if (ultimaLista.canciones.length) return pintarLista(ultimaLista.titulo, ultimaLista.canciones);
-      document.getElementById("tituloLista").textContent = "Buscar";
-      document.getElementById("lista").innerHTML = '<p class="aviso">Escribe una canción, un artista o un trozo de la letra. 🎧</p>';
-    }
+    $("btnClave").onclick = mostrarBienvenida;
+    $("btnClave").hidden = !!leer("claveYT", "");
 
     // =====================================================================
     // 3) BUSCAR canciones en YouTube
@@ -506,72 +558,78 @@
       return m ? m[1] : null;
     }
 
-    // tocarPrimera = true: cuando eliges una canción de las sugerencias, suena directo
-    async function buscar(texto, tocarPrimera = false) {
-      const lista = document.getElementById("lista");
-
-      // Si pegaste un enlace, lo reproducimos directamente (no hace falta clave)
-      const id = idDeEnlace(texto);
-      if (id) {
-        cola = [{ id, titulo: "Vídeo de YouTube", canal: "", img: `https://i.ytimg.com/vi/${id}/mqdefault.jpg` }];
-        ultimaLista = { titulo: "Enlace", canciones: cola };
-        pintarLista("Enlace", cola);
-        tocar(0);
-        return;
-      }
-
+    // Pregunta a YouTube y devuelve una lista de canciones (gasta 1 de tus ~100 búsquedas diarias)
+    async function buscarEnYouTube(texto) {
       const clave = leer("claveYT", "");
-      if (!clave) return mostrarBienvenida();
-
-      document.getElementById("tituloLista").textContent = "Buscando…";
-      lista.innerHTML = "";
-      // fetch = "ve a esta dirección de internet y tráeme la respuesta"
+      if (!clave) throw new Error("sin clave");
       const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
                   "&videoCategoryId=10&maxResults=20&q=" + encodeURIComponent(texto) + "&key=" + clave;
+      const datos = await (await fetch(url)).json();
+      if (datos.error) throw new Error(datos.error.message);
+      return datos.items.map(v => ({
+        id: v.id.videoId,
+        titulo: decodificar(v.snippet.title),
+        canal: decodificar(v.snippet.channelTitle),
+        img: v.snippet.thumbnails.medium.url
+      }));
+    }
+
+    // Busca y pinta los resultados. tocarPrimera = true: suena la primera directo
+    async function buscar(texto, tocarPrimera = false) {
+      const id = idDeEnlace(texto);
+      if (id) {   // Si pegaste un enlace, lo reproducimos directamente (no hace falta clave)
+        const lista = [{ id, titulo: "Vídeo de YouTube", canal: "", img: `https://i.ytimg.com/vi/${id}/mqdefault.jpg` }];
+        ultimaLista = { titulo: "Enlace", canciones: lista };
+        pintarLista("Enlace", lista);
+        return reproducirLista(lista, 0, "Enlace");
+      }
+      if (!leer("claveYT", "")) return mostrarBienvenida();
+      $("tituloLista").textContent = "Buscando…";
+      $("lista").innerHTML = "";
       try {
-        const respuesta = await fetch(url);
-        const datos = await respuesta.json();
-        if (datos.error) throw new Error(datos.error.message);
-        // Convertimos la respuesta de YouTube en nuestras "canciones"
-        cola = datos.items.map(v => ({
-          id: v.id.videoId,
-          titulo: decodificar(v.snippet.title),
-          canal: decodificar(v.snippet.channelTitle),
-          img: v.snippet.thumbnails.medium.url
-        }));
-        ultimaLista = { titulo: 'Resultados para "' + texto + '"', canciones: cola };
-        pintarLista(ultimaLista.titulo, cola);
-        if (tocarPrimera) tocar(0);
+        const lista = await buscarEnYouTube(texto);
+        ultimaLista = { titulo: 'Resultados para "' + texto + '"', canciones: lista };
+        if (vistaActual === "buscar") pintarLista(ultimaLista.titulo, lista);
+        if (tocarPrimera) reproducirLista(lista, 0, texto);
+        else precargar(lista[0]?.id);   // la primera suele ser la que eliges: la vamos cargando
       } catch (e) {
-        // Si falla (por ejemplo, clave mala), damos la opción de cambiarla
-        document.getElementById("tituloLista").textContent = "Algo salió mal";
-        lista.innerHTML = '<p class="aviso">Error al buscar: ' + e.message +
+        $("tituloLista").textContent = "Algo salió mal";
+        $("lista").innerHTML = '<p class="aviso">Error al buscar: ' + e.message +
           '<br><br><button class="boton gris" id="btnCambiarClave">Cambiar clave de YouTube</button></p>';
-        document.getElementById("btnCambiarClave").onclick = mostrarBienvenida;
+        $("btnCambiarClave").onclick = mostrarBienvenida;
       }
     }
+
+    // Para las recomendaciones: busca "artista - canción" y suena sin cambiar de pantalla
+    async function tocarPorNombre(texto) {
+      if (!leer("claveYT", "")) return mostrarBienvenida();
+      try {
+        const lista = await buscarEnYouTube(texto);
+        reproducirLista(lista, 0, "Recomendado para ti");
+      } catch (e) { alertaSuave("No se pudo reproducir: " + e.message); }
+    }
+    function alertaSuave(texto) { $("tituloLista").textContent = texto; }
 
     // YouTube manda textos como "Rock &amp; Roll"; esto lo deja en "Rock & Roll"
     function decodificar(t) {
       const el = document.createElement("textarea"); el.innerHTML = t; return el.value;
     }
 
-    document.getElementById("formBuscar").onsubmit = (e) => {
+    $("formBuscar").onsubmit = (e) => {
       e.preventDefault();   // evita que la página se recargue
       cerrarSugerencias();
       campo.blur();         // esconde el teclado del móvil
       const texto = campo.value.trim();
-      if (texto) { cambiarVista("buscar", false); buscar(texto); }
+      if (texto) buscar(texto);
     };
 
     // =====================================================================
-    // 3b) SUGERENCIAS mientras escribes
+    // 3b) SUGERENCIAS mientras escribes (gratis, no gastan tu clave)
     // =====================================================================
-    // Usamos dos fuentes GRATIS que no gastan tu clave de YouTube:
     //  - Apple Music (iTunes): conoce todos los artistas y canciones, con portada.
     //  - Las sugerencias de YouTube: entienden frases de letras de canciones.
-    const campo = document.getElementById("campoBuscar");
-    const cajaSug = document.getElementById("sugerencias");
+    const campo = $("campoBuscar");
+    const cajaSug = $("sugerencias");
     const pais = (navigator.language.split("-")[1] || "CO").toUpperCase();
     let temporizador = null;
     let ultimaPeticion = 0;
@@ -586,17 +644,21 @@
 
     async function pedirSugerencias(texto) {
       const numero = ++ultimaPeticion;   // para ignorar respuestas viejas que lleguen tarde
-      const [canciones, frases] = await Promise.all([sugerenciasItunes(texto), sugerenciasYouTube(texto)]);
+      const [canciones, frases] = await Promise.all([itunes(texto, 6), sugerenciasYouTube(texto)]);
       if (numero !== ultimaPeticion || campo.value.trim() !== texto) return;
       pintarSugerencias(canciones, frases);
     }
 
-    async function sugerenciasItunes(texto) {
+    // Busca canciones en el catálogo de Apple (gratis). Devuelve título, artista y portada.
+    async function itunes(texto, cuantas) {
       try {
-        const url = "https://itunes.apple.com/search?media=music&entity=song&limit=6&country=" + pais +
-                    "&term=" + encodeURIComponent(texto);
+        const url = "https://itunes.apple.com/search?media=music&entity=song&limit=" + cuantas +
+                    "&country=" + pais + "&term=" + encodeURIComponent(texto);
         const datos = await (await fetch(url)).json();
-        return datos.results.map(c => ({ titulo: c.trackName, artista: c.artistName, img: c.artworkUrl60 }));
+        return datos.results.map(c => ({
+          titulo: c.trackName, artista: c.artistName,
+          img: c.artworkUrl100.replace("100x100", "300x300")   // pedimos la portada más grande
+        }));
       } catch { return []; }
     }
 
@@ -630,7 +692,7 @@
         cajaSug.insertAdjacentHTML("beforeend", "<h4>Sugerencias</h4>");
         frases.forEach(f => {
           const el = fila(`<span class="lupa">${icono("buscar")}</span><div><div class="titulo"></div></div>`, () => {
-            campo.value = f; cerrarSugerencias(); campo.blur(); cambiarVista("buscar", false); buscar(f);
+            campo.value = f; cerrarSugerencias(); campo.blur(); buscar(f);
           });
           el.querySelector(".titulo").textContent = f;
         });
@@ -640,7 +702,7 @@
         canciones.forEach(c => {
           const el = fila('<img alt=""><div><div class="titulo"></div><div class="canal"></div></div>', () => {
             const texto = c.artista + " - " + c.titulo;
-            campo.value = texto; cerrarSugerencias(); campo.blur(); cambiarVista("buscar", false);
+            campo.value = texto; cerrarSugerencias(); campo.blur();
             buscar(texto, true);   // la buscamos en YouTube y suena directo
           });
           el.querySelector("img").src = c.img;
@@ -656,17 +718,115 @@
     campo.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarSugerencias(); });
 
     // =====================================================================
-    // 4) PINTAR la lista de canciones en la pantalla
+    // 4) INICIO: accesos rápidos, lo reciente y recomendaciones
+    // =====================================================================
+    let recomendaciones = null;   // las guardamos para no pedirlas cada vez que entras
+
+    function saludo() {
+      const h = new Date().getHours();
+      return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+    }
+
+    function mostrarInicio() {
+      $("tituloLista").textContent = "";
+      const lista = $("lista");
+      lista.innerHTML = `<div class="saludo">${saludo()}</div><div class="accesos" id="accesos"></div>`;
+
+      // Accesos rápidos (cuadritos de 2 en 2): tus carpetas y lo último que escuchaste
+      const accesos = $("accesos");
+      const cuadrito = (tapaHtml, nombre, alTocar) => {
+        const el = document.createElement("div");
+        el.className = "tile";
+        el.innerHTML = tapaHtml + "<span></span>";
+        el.querySelector("span").textContent = nombre;
+        el.onclick = alTocar;
+        accesos.appendChild(el);
+      };
+      carpetas.slice(0, 4).forEach(k => cuadrito(tapaDe(k), k.nombre, () => cambiarVista("carpeta:" + k.id)));
+      historial.slice(0, 8 - accesos.children.length).forEach((c, i) =>
+        cuadrito(`<img class="tapa" src="${c.img}" alt="">`, c.titulo, () => reproducirLista(historial, i, "Escuchado recientemente")));
+
+      // Escuchado recientemente (suena directo, no gasta tu clave porque ya sabemos su id)
+      if (historial.length) {
+        seccion("Escuchado recientemente", historial.slice(0, 15).map((c, i) => ({
+          titulo: c.titulo, artista: c.canal, img: c.img,
+          alTocar: () => reproducirLista(historial, i, "Escuchado recientemente")
+        })));
+      }
+
+      // Recomendaciones (de Apple Music, gratis). Mientras cargan, cajitas "fantasma".
+      if (recomendaciones) recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
+      else {
+        const cargando = seccion("Recomendado para ti", Array(6).fill(null));
+        cargarRecomendaciones().then(() => {
+          cargando.remove();
+          if (vistaActual === "inicio") recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
+        });
+      }
+    }
+
+    // Dibuja una fila deslizable de tarjetas. canciones = null → tarjeta "cargando"
+    function seccion(titulo, canciones) {
+      const s = document.createElement("div");
+      s.className = "seccion";
+      s.innerHTML = '<h3></h3><div class="fila"></div>';
+      s.querySelector("h3").textContent = titulo;
+      const fila = s.querySelector(".fila");
+      canciones.forEach(c => {
+        const t = document.createElement("div");
+        t.className = "tarjetaRec";
+        if (!c) { t.innerHTML = '<img class="esqueleto" alt="">'; fila.appendChild(t); return; }
+        t.innerHTML = `<img src="${c.img}" alt="" loading="lazy"><div class="titulo"></div><div class="canal"></div>`;
+        t.querySelector(".titulo").textContent = c.titulo;
+        t.querySelector(".canal").textContent = c.artista;
+        t.onclick = c.alTocar || (() => tocarPorNombre(c.artista + " - " + c.titulo));
+        fila.appendChild(t);
+      });
+      $("lista").appendChild(s);
+      return s;
+    }
+
+    // Mira qué artistas escuchas más y pide a Apple canciones parecidas
+    async function cargarRecomendaciones() {
+      const cuenta = {};
+      [...historial, ...carpetas.flatMap(k => k.canciones)].forEach(c => {
+        const artista = limpiarArtista(c.canal);
+        if (artista) cuenta[artista] = (cuenta[artista] || 0) + 1;
+      });
+      let favoritos = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]).slice(0, 3);
+      // Si aún no has escuchado nada, usamos artistas populares
+      const populares = ["Bad Bunny", "Karol G", "Feid", "Shakira", "Peso Pluma", "Ryan Castro", "Blessd", "Daddy Yankee"];
+      if (!favoritos.length) favoritos = populares.sort(() => Math.random() - 0.5).slice(0, 3);
+      const resultados = await Promise.all(favoritos.map(a => itunes(a, 12)));
+      recomendaciones = [];
+      // Mezcla de todo: "Recomendado para ti"
+      const mezcla = resultados.flat().sort(() => Math.random() - 0.5).slice(0, 12);
+      if (mezcla.length) recomendaciones.push({ titulo: "Recomendado para ti", canciones: mezcla });
+      // Y una fila por artista: "Más de …"
+      favoritos.forEach((a, i) => {
+        if (resultados[i].length) recomendaciones.push({ titulo: "Más de " + a, canciones: resultados[i] });
+      });
+    }
+    // "Daddy Yankee - Topic" o "DaddyYankeeVEVO" → "Daddy Yankee"
+    function limpiarArtista(nombre = "") {
+      return nombre.replace(/\s*-\s*Topic$/i, "").replace(/VEVO$/i, "").replace(/\s*(Official|Oficial).*$/i, "").trim();
+    }
+
+    // =====================================================================
+    // 5) PINTAR una lista de canciones
     // =====================================================================
     function guardarCarpetas() { guardar("carpetas", carpetas); }
     function estaGuardada(id) { return carpetas.some(k => k.canciones.some(c => c.id === id)); }
 
-    // cabecera = algo que se pone encima de la lista (portada y botones de la carpeta)
+    let listaPintada = null;
+    let nombreListaPintada = "";
     function pintarLista(titulo, canciones, cabecera = null) {
-      document.getElementById("tituloLista").textContent = titulo;
-      const lista = document.getElementById("lista");
+      $("tituloLista").textContent = titulo;
+      const lista = $("lista");
       lista.innerHTML = "";
       if (cabecera) lista.appendChild(cabecera);
+      listaPintada = canciones;
+      nombreListaPintada = titulo || "Mi Música";
       if (canciones.length === 0) {
         lista.insertAdjacentHTML("beforeend", '<p class="aviso">No hay canciones aquí todavía. Toca el corazón de una canción para guardarla.</p>');
         return;
@@ -675,27 +835,30 @@
         const fila = document.createElement("div");
         fila.className = "cancion";
         fila.dataset.indice = i;
-        const guardada = estaGuardada(c.id);
         fila.innerHTML = `
           <span class="num">${i + 1}</span>
           <img src="${c.img}" alt="" loading="lazy">
           <div style="min-width:0"><div class="titulo"></div><div class="canal"></div></div>
-          <button class="corazon ${guardada ? "lleno" : ""}" title="Guardar en carpeta">${icono(guardada ? "corazonLleno" : "corazon")}</button>`;
+          <button class="corazon" title="Guardar en carpeta"></button>`;
         // textContent (y no innerHTML) para que un título raro no rompa la página
         fila.querySelector(".titulo").textContent = c.titulo;
         fila.querySelector(".canal").textContent = c.canal;
-        fila.onclick = () => { cola = canciones; tocar(i); };
+        pintarCorazon(fila.querySelector(".corazon"), c.id);
+        fila.onclick = () => reproducirLista(canciones, i, nombreListaPintada);
         fila.querySelector(".corazon").onclick = (e) => { e.stopPropagation(); abrirHoja(c); };
         lista.appendChild(fila);
       });
-      listaPintada = canciones;
       marcarSonando();
+    }
+    function pintarCorazon(btn, id) {
+      const si = estaGuardada(id);
+      btn.classList.toggle("lleno", si);
+      btn.innerHTML = icono(si ? "corazonLleno" : "corazon");
     }
 
     // Pone en verde (con barritas que bailan) la canción que está sonando
-    let listaPintada = null;
     function marcarSonando() {
-      document.querySelectorAll(".cancion").forEach(f => {
+      todos(".cancion").forEach(f => {
         const i = Number(f.dataset.indice);
         const suena = listaPintada === cola && i === posicion;
         f.classList.toggle("sonando", suena);
@@ -703,16 +866,16 @@
       });
     }
 
-    // Vuelve a pintar lo que estés viendo (por ejemplo, tras guardar una canción)
     let ultimaLista = { titulo: "", canciones: [] };
     function repintar() {
       if (vistaActual === "biblioteca") mostrarBiblioteca();
       else if (vistaActual.startsWith("carpeta:")) mostrarCarpeta(vistaActual.slice(8));
-      else if (ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
+      else if (vistaActual === "buscar" && ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
+      if (posicion >= 0) todos(".corazonActual").forEach(b => pintarCorazon(b, cola[posicion].id));
     }
 
     // =====================================================================
-    // 5) CARPETAS (tu biblioteca)
+    // 6) CARPETAS (tu biblioteca)
     // =====================================================================
     function crearCarpeta(nombre) {
       nombre = nombre.trim();
@@ -723,36 +886,37 @@
       return nueva;
     }
 
-    // La "tapa" de una carpeta: la portada de su primera canción, o un dibujo
+    // La "tapa" de una carpeta: Favoritos tiene corazón (como "Tus me gusta");
+    // las demás, la portada de su primera canción o una nota musical
     function tapaDe(k, clase = "tapa") {
+      if (k.id === "fav") return `<div class="${clase}">${icono("corazonLleno")}</div>`;
       return k.canciones.length
         ? `<img class="${clase}" src="${k.canciones[0].img}" alt="">`
-        : `<div class="${clase}">${icono(k.id === "fav" ? "corazonLleno" : "nota")}</div>`;
+        : `<div class="${clase} nota">${icono("nota")}</div>`;
     }
     function cuantas(n) { return n + (n === 1 ? " canción" : " canciones"); }
 
     function mostrarBiblioteca() {
-      document.getElementById("tituloLista").textContent = "Tu biblioteca";
-      const lista = document.getElementById("lista");
+      $("tituloLista").textContent = "Tu biblioteca";
+      const lista = $("lista");
       lista.innerHTML = `
         <form class="nuevaCarpeta" id="formNueva">
           <input id="nombreNueva" placeholder="Nombre de la nueva carpeta" autocomplete="off">
           <button class="boton">${icono("mas")}Crear</button>
         </form>
         <div class="carpetas" id="gridCarpetas"></div>`;
-      document.getElementById("formNueva").onsubmit = (e) => {
+      $("formNueva").onsubmit = (e) => {
         e.preventDefault();
-        if (crearCarpeta(document.getElementById("nombreNueva").value)) mostrarBiblioteca();
+        if (crearCarpeta($("nombreNueva").value)) mostrarBiblioteca();
       };
-      const grid = document.getElementById("gridCarpetas");
       carpetas.forEach(k => {
         const el = document.createElement("div");
         el.className = "carpeta";
         el.innerHTML = tapaDe(k) + '<div class="titulo"></div><div class="canal"></div>';
         el.querySelector(".titulo").textContent = k.nombre;
-        el.querySelector(".canal").textContent = cuantas(k.canciones.length);
+        el.querySelector(".canal").textContent = "Carpeta · " + cuantas(k.canciones.length);
         el.onclick = () => cambiarVista("carpeta:" + k.id);
-        grid.appendChild(el);
+        $("gridCarpetas").appendChild(el);
       });
     }
 
@@ -773,14 +937,9 @@
         </div>`;
       cab.querySelector("h3").textContent = k.nombre;
       // ▶ Reproducir: la cola pasa a ser TODA la carpeta, empezando por la primera
-      cab.querySelector(".botonPlayGrande").onclick = () => {
-        if (!k.canciones.length) return;
-        cola = k.canciones; tocar(0);
-      };
+      cab.querySelector(".botonPlayGrande").onclick = () => { if (k.canciones.length) reproducirLista(k.canciones, 0, k.nombre); };
       cab.querySelector('[data-a="mezclar"]').onclick = () => {
-        if (!k.canciones.length) return;
-        cola = [...k.canciones].sort(() => Math.random() - 0.5);   // copia desordenada
-        tocar(0);
+        if (k.canciones.length) reproducirLista([...k.canciones].sort(() => Math.random() - 0.5), 0, k.nombre);
       };
       cab.querySelector('[data-a="volver"]').onclick = () => cambiarVista("biblioteca");
       const borrar = cab.querySelector('[data-a="borrar"]');
@@ -791,19 +950,19 @@
         } else { borrar.classList.add("seguro"); borrar.innerHTML = icono("basura") + "¿Borrar? Toca otra vez"; }
       };
       pintarLista(k.nombre, k.canciones, cab);
-      document.getElementById("tituloLista").textContent = "";
+      $("tituloLista").textContent = "";
     }
 
     // ----- Hoja "Guardar en carpeta" -----
     let cancionHoja = null;
     function abrirHoja(c) {
       cancionHoja = c;
-      document.getElementById("hojaCancion").textContent = c.titulo;
+      $("hojaCancion").textContent = c.titulo;
       pintarHoja();
-      document.getElementById("fondoHoja").hidden = false;
+      $("fondoHoja").hidden = false;
     }
     function pintarHoja() {
-      const caja = document.getElementById("hojaCarpetas");
+      const caja = $("hojaCarpetas");
       caja.innerHTML = "";
       carpetas.forEach(k => {
         const dentro = k.canciones.some(x => x.id === cancionHoja.id);
@@ -820,32 +979,39 @@
         caja.appendChild(b);
       });
     }
-    document.getElementById("hojaNueva").onsubmit = (e) => {
+    $("hojaNueva").onsubmit = (e) => {
       e.preventDefault();
-      const campoNombre = document.getElementById("hojaNombre");
-      const nueva = crearCarpeta(campoNombre.value);
+      const nueva = crearCarpeta($("hojaNombre").value);
       if (!nueva) return;
       nueva.canciones.push(cancionHoja);   // la canción entra directo en la carpeta nueva
-      guardarCarpetas(); campoNombre.value = ""; pintarHoja();
+      guardarCarpetas(); $("hojaNombre").value = ""; pintarHoja();
     };
-    function cerrarHoja() { document.getElementById("fondoHoja").hidden = true; repintar(); }
-    document.getElementById("hojaListo").onclick = cerrarHoja;
-    document.getElementById("fondoHoja").onclick = (e) => { if (e.target.id === "fondoHoja") cerrarHoja(); };
+    function cerrarHoja() { $("fondoHoja").hidden = true; repintar(); }
+    $("hojaListo").onclick = cerrarHoja;
+    $("fondoHoja").onclick = (e) => { if (e.target.id === "fondoHoja") cerrarHoja(); };
 
-    let vistaActual = "buscar";
+    // ----- Cambiar de pestaña (Inicio / Buscar / Tu biblioteca) -----
+    let vistaActual = "inicio";
     function cambiarVista(vista, pintar = true) {
       vistaActual = vista;
       const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
-      document.querySelectorAll(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
+      todos(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
+      $("formBuscar").hidden = vista !== "buscar";
+      $("contenido").scrollTop = 0;
       if (!pintar) return;
-      if (vista === "biblioteca") mostrarBiblioteca();
+      if (vista === "inicio") mostrarInicio();
+      else if (vista === "biblioteca") mostrarBiblioteca();
       else if (vista.startsWith("carpeta:")) mostrarCarpeta(vista.slice(8));
-      else mostrarInicio();
+      else {   // Buscar
+        if (!leer("claveYT", "")) return mostrarBienvenida();
+        if (ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
+        else { $("tituloLista").textContent = ""; $("lista").innerHTML = '<p class="aviso">Escribe una canción, un artista o un trozo de la letra. 🎧</p>'; }
+      }
     }
-    document.querySelectorAll(".menu").forEach(b => b.onclick = () => cambiarVista(b.dataset.vista));
+    todos(".menu").forEach(b => b.onclick = () => cambiarVista(b.dataset.vista));
 
     // =====================================================================
-    // 6) EL REPRODUCTOR (YouTube IFrame API) con PRECARGA
+    // 7) EL REPRODUCTOR (YouTube IFrame API) con PRECARGA
     // =====================================================================
     // Truco tipo Spotify: tenemos TRES reproductores.
     //  - Uno suena.
@@ -874,7 +1040,6 @@
     function alCambiarEstado(n, estado) {
       const E = YT.PlayerState;
       if (n === activo) {
-        // El que suena: si termina, siguiente; si empieza a sonar, precargamos vecinas
         if (estado === E.ENDED) siguiente();
         if (estado === E.PLAYING) { precargarVecinas(); silencio.play().catch(() => {}); }
         if (estado === E.PAUSED) silencio.pause();
@@ -889,13 +1054,14 @@
     }
 
     function ponerIconoPlay(sonando) {
-      const btn = document.getElementById("btnPlay");
       const nuevo = sonando ? "pausa" : "play";
-      if (btn.dataset.icono === nuevo) return;
-      btn.dataset.icono = nuevo;
-      btn.innerHTML = icono(nuevo);
-      // Pequeño "latido" cuando cambia entre play y pausa
-      btn.classList.remove("latido"); void btn.offsetWidth; btn.classList.add("latido");
+      todos(".btnPlay").forEach(btn => {
+        if (btn.dataset.icono === nuevo) return;
+        btn.dataset.icono = nuevo;
+        btn.innerHTML = icono(nuevo);
+        // Pequeño "latido" cuando cambia entre play y pausa
+        btn.classList.remove("latido"); void btn.offsetWidth; btn.classList.add("latido");
+      });
     }
 
     // Deja la anterior y la siguiente cargadas en los reproductores de reserva
@@ -904,13 +1070,22 @@
       const queremos = [cola[posicion + 1]?.id, cola[posicion - 1]?.id].filter(Boolean);
       queremos.forEach(id => {
         if (cargado.some((x, n) => x === id && n !== activo)) return;   // ya está cargada
-        // Buscamos un reproductor libre (que no suene y que no tenga otra que queremos)
         const libre = [0, 1, 2].find(n => n !== activo && !queremos.includes(cargado[n]));
         if (libre === undefined) return;
         cargado[libre] = id;
         jugadores[libre].mute();
         jugadores[libre].loadVideoById(id);
       });
+    }
+
+    // Carga una canción en un reproductor libre, en silencio, por si la eligen
+    function precargar(id) {
+      if (!id || !todosListos() || cargado.includes(id)) return;
+      const libre = [0, 1, 2].find(n => n !== activo && cargado[n] !== cola[posicion + 1]?.id && cargado[n] !== cola[posicion - 1]?.id);
+      if (libre === undefined) return;
+      cargado[libre] = id;
+      jugadores[libre].mute();
+      jugadores[libre].loadVideoById(id);
     }
 
     function cambiarA(n) {
@@ -920,6 +1095,13 @@
       activo = n;
       reproductor = jugadores[n];
       jugadores.forEach((j, k) => j.getIframe().classList.toggle("dormido", k !== activo));
+    }
+
+    // Empieza a sonar una lista desde la canción número i
+    function reproducirLista(lista, i, nombre) {
+      cola = lista;
+      nombreCola = nombre || "Mi Música";
+      tocar(i);
     }
 
     function tocar(i) {
@@ -947,26 +1129,91 @@
           reproductor.loadVideoById(c.id);
         }
       }
-      document.getElementById("infoImg").src = c.img;
-      document.getElementById("infoTitulo").textContent = c.titulo;
-      document.getElementById("infoCanal").textContent = c.canal;
+      // Ponemos el nombre, artista y portada en el mini y en la pantalla grande
+      $("mini").hidden = false;
+      todos(".tapaActual").forEach(img => img.src = c.img);
+      todos(".nombreActual").forEach(el => el.textContent = c.titulo);
+      todos(".artistaActual").forEach(el => el.textContent = c.canal);
+      todos(".corazonActual").forEach(b => pintarCorazon(b, c.id));
+      $("desde").textContent = nombreCola;
+      $("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
       document.title = c.titulo + " · Mi Música";
-      document.getElementById("sonandoAhora").classList.add("visible");
       actualizarNotificacion(c);
-      // Portada en grande (hqdefault es la imagen más grande)
-      document.getElementById("portada").src = `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`;
-      // Dejamos la barra a cero para que no se vea el tiempo de la canción anterior
+      apuntarEnHistorial(c);
       ponerProgreso(0, 0);
       marcarSonando();
     }
 
+    function apuntarEnHistorial(c) {
+      historial = [c, ...historial.filter(x => x.id !== c.id)].slice(0, 30);
+      guardar("historial", historial);
+    }
+
+    function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
+    // Como en Spotify: si la canción ya lleva más de 3 segundos, ⏮ la empieza de nuevo
+    function anterior() {
+      if (reproductor?.getCurrentTime && reproductor.getCurrentTime() > 3) return reproductor.seekTo(0, true);
+      if (posicion > 0) tocar(posicion - 1);
+    }
+    function playPausa() {
+      if (!reproductor || posicion < 0) return;
+      if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
+      else reproductor.playVideo();
+    }
+
+    // Todos los botones con data-accion (del mini y de la pantalla grande)
+    todos("[data-accion]").forEach(b => b.onclick = (e) => {
+      e.stopPropagation();
+      ({ play: playPausa, siguiente, anterior })[b.dataset.accion]();
+    });
+    todos(".corazonActual").forEach(b => b.onclick = (e) => { e.stopPropagation(); if (posicion >= 0) abrirHoja(cola[posicion]); });
+
+    // Abrir y cerrar la pantalla grande
+    $("abrirPantalla").onclick = () => $("pantalla").classList.add("abierta");
+    $("mini").onclick = (e) => { if (window.innerWidth <= 700) $("pantalla").classList.add("abierta"); };
+    $("cerrarPantalla").onclick = () => $("pantalla").classList.remove("abierta");
+
+    // Volumen
+    const barraVolumen = $("barraVolumen");
+    barraVolumen.oninput = () => {
+      volumen = Number(barraVolumen.value);
+      barraVolumen.style.setProperty("--pct", volumen + "%");   // pinta la parte llena
+      reproductor?.setVolume(volumen);
+    };
+
+    // Barras de tiempo (hay dos: la del mini en ordenador y la de la pantalla grande)
+    let arrastrando = false;
+    todos(".barraTiempo").forEach(barra => {
+      barra.addEventListener("pointerdown", () => arrastrando = true);
+      barra.addEventListener("click", (e) => e.stopPropagation());
+      barra.addEventListener("change", () => {
+        arrastrando = false;
+        if (reproductor?.getDuration) reproductor.seekTo(reproductor.getDuration() * barra.value / 1000, true);
+      });
+      barra.oninput = () => barra.style.setProperty("--pct", barra.value / 10 + "%");
+    });
+
+    function formato(seg) { seg = Math.floor(seg || 0); return Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"); }
+    function ponerProgreso(actual, total) {
+      todos(".tActual").forEach(el => el.textContent = formato(actual));
+      todos(".tTotal").forEach(el => el.textContent = formato(total));
+      const pct = total ? actual / total * 100 : 0;
+      $("rayita").style.width = pct + "%";
+      if (arrastrando) return;
+      todos(".barraTiempo").forEach(b => { b.value = pct * 10; b.style.setProperty("--pct", pct + "%"); });
+    }
+    // Cada medio segundo actualizamos el tiempo
+    setInterval(() => {
+      if (!reproductor?.getDuration || posicion < 0) return;
+      ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
+    }, 500);
+
     // =====================================================================
-    // 7) CONTROLES EN LA NOTIFICACIÓN DEL MÓVIL (⏮ ⏯ ⏭)
+    // 8) CONTROLES EN LA NOTIFICACIÓN DEL MÓVIL (⏮ ⏯ ⏭)
     // =====================================================================
-    // "Media Session" es la forma de decirle al móvil qué suena y qué hacer
-    // con los botones de la notificación. Pero el móvil solo nos hace caso si
-    // NUESTRA página está sonando (no solo el vídeo de YouTube de dentro).
-    // Truco: reproducimos un audio de silencio en bucle mientras suena la música.
+    // "Media Session" le dice al móvil qué suena y qué hacer con los botones
+    // de la notificación. El móvil solo nos hace caso si NUESTRA página suena,
+    // así que reproducimos un audio de silencio en bucle mientras suena la música.
     const silencio = new Audio(crearSilencio());
     silencio.loop = true;
 
@@ -984,13 +1231,10 @@
     function actualizarNotificacion(c) {
       if (!("mediaSession" in navigator)) return;
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: c.titulo,
-        artist: c.canal,
-        album: "Mi Música",
+        title: c.titulo, artist: c.canal, album: "Mi Música",
         artwork: [{ src: `https://i.ytimg.com/vi/${c.id}/hqdefault.jpg`, sizes: "480x360", type: "image/jpeg" }]
       });
     }
-
     if ("mediaSession" in navigator) {
       const accion = (nombre, hacer) => { try { navigator.mediaSession.setActionHandler(nombre, hacer); } catch {} };
       accion("play", () => reproductor?.playVideo());
@@ -999,62 +1243,13 @@
       accion("previoustrack", () => anterior());
     }
 
-    function siguiente() { if (posicion < cola.length - 1) tocar(posicion + 1); }
-    // Como en Spotify: si la canción ya lleva más de 3 segundos, ⏮ la empieza
-    // de nuevo (instantáneo). Si está empezando, va a la anterior.
-    function anterior() {
-      if (reproductor?.getCurrentTime && reproductor.getCurrentTime() > 3) return reproductor.seekTo(0, true);
-      if (posicion > 0) tocar(posicion - 1);
-    }
-
-    document.getElementById("btnSiguiente").onclick = siguiente;
-    document.getElementById("btnAnterior").onclick = anterior;
-    document.getElementById("btnPlay").onclick = () => {
-      if (!reproductor || posicion < 0) return;
-      if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
-      else reproductor.playVideo();
-    };
-    const barraVolumen = document.getElementById("barraVolumen");
-    barraVolumen.oninput = () => {
-      volumen = Number(barraVolumen.value);
-      barraVolumen.style.setProperty("--pct", volumen + "%");   // pinta la parte llena
-      reproductor?.setVolume(volumen);
-    };
-    const barra = document.getElementById("barraProgreso");
-    let arrastrando = false;
-    barra.addEventListener("pointerdown", () => arrastrando = true);
-    barra.addEventListener("change", () => {
-      arrastrando = false;
-      if (reproductor?.getDuration) reproductor.seekTo(reproductor.getDuration() * barra.value / 1000, true);
-    });
-    barra.oninput = () => barra.style.setProperty("--pct", barra.value / 10 + "%");
-
-    // Cada medio segundo actualizamos la barra de tiempo
-    function formato(seg) { seg = Math.floor(seg || 0); return Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"); }
-    function ponerProgreso(actual, total) {
-      document.getElementById("tiempoActual").textContent = formato(actual);
-      document.getElementById("tiempoTotal").textContent = formato(total);
-      if (arrastrando) return;
-      const pct = total ? actual / total * 100 : 0;
-      barra.value = pct * 10;
-      barra.style.setProperty("--pct", pct + "%");
-    }
-    setInterval(() => {
-      if (!reproductor?.getDuration || posicion < 0) return;
-      ponerProgreso(reproductor.getCurrentTime(), reproductor.getDuration());
-    }, 500);
-
     // ----- Ver vídeo o solo música -----
-    // Por defecto: solo música (se ve la portada). Tu elección se recuerda.
     function aplicarModoVideo() {
       const ver = leer("verVideo", false);
-      document.getElementById("video").classList.toggle("conVideo", ver);
-      document.getElementById("btnVideo").innerHTML = ver ? icono("nota") + "Solo música" : icono("video") + "Ver vídeo";
+      $("video").classList.toggle("conVideo", ver);
+      $("btnVideo").innerHTML = ver ? icono("nota") + "Solo música" : icono("video") + "Ver vídeo";
     }
-    document.getElementById("btnVideo").onclick = () => {
-      guardar("verVideo", !leer("verVideo", false));
-      aplicarModoVideo();
-    };
+    $("btnVideo").onclick = () => { guardar("verVideo", !leer("verVideo", false)); aplicarModoVideo(); };
     aplicarModoVideo();
 
     // ----- ¿Estás usando Brave? -----
@@ -1063,8 +1258,7 @@
       let esBrave = false;
       try { esBrave = !!(navigator.brave && await navigator.brave.isBrave()); } catch {}
       if (esBrave || leer("ocultarAvisoBrave", false)) return;
-
-      const enlace = document.getElementById("enlaceBrave");
+      const enlace = $("enlaceBrave");
       const ua = navigator.userAgent;
       if (/Android/i.test(ua)) {
         // Enlace especial de Android: si Brave está instalado abre la app ahí;
@@ -1078,23 +1272,20 @@
       } else {
         enlace.textContent = "Descargar Brave";
       }
-      document.getElementById("avisoBrave").hidden = false;
+      $("avisoBrave").hidden = false;
     }
-    document.getElementById("cerrarAvisoBrave").onclick = () => {
-      guardar("ocultarAvisoBrave", true);
-      document.getElementById("avisoBrave").hidden = true;
-    };
+    $("cerrarAvisoBrave").onclick = () => { guardar("ocultarAvisoBrave", true); $("avisoBrave").hidden = true; };
     comprobarBrave();
 
     // Registramos el ayudante para que se pueda instalar como app
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
-    mostrarInicio();   // lo primero que se ve al abrir la app
     ponerIconoPlay(false);
+    cambiarVista("inicio");   // lo primero que se ve al abrir la app
 
     // Atajo: barra espaciadora = play/pausa (si no estás escribiendo)
     document.addEventListener("keydown", (e) => {
-      if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); document.getElementById("btnPlay").click(); }
+      if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); playPausa(); }
     });
   </script>
 </body>

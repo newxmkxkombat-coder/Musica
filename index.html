@@ -1237,7 +1237,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "50 · 31 oct";
+    const VERSION = "51 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -1795,8 +1795,12 @@
           if (repetir === "una") { reproductor.seekTo(0, true); reproductor.playVideo(); }
           else siguiente();
         }
-        if (estado === E.PLAYING) { cargarExtras(); prepararRadio(); precargarVecinas(); silencio.play().catch(() => {}); }
-        if (estado === E.PAUSED) silencio.pause();
+        if (estado === E.PLAYING) { cargarExtras(); prepararRadio(); precargarVecinas(); silencio.play().catch(() => {}); quiereSonar = true; pausaAjena = false; }
+        if (estado === E.PAUSED) {
+          // ¿La pausaste TÚ? Entonces todo normal. Si no, la pausó otra app (WhatsApp, Facebook…)
+          if (quiereSonar) pausaAjena = true;
+          else silencio.pause();   // (si fue otra app no tocamos el silencio: así el móvil nos puede "devolver" el sonido)
+        }
         if ("mediaSession" in navigator && (estado === E.PLAYING || estado === E.PAUSED))
           navigator.mediaSession.playbackState = estado === E.PLAYING ? "playing" : "paused";
         ponerIconoPlay(estado === E.PLAYING);
@@ -2107,7 +2111,7 @@
     }
     function playPausa() {
       if (!reproductor || posicion < 0) return;
-      if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) reproductor.pauseVideo();
+      if (reproductor.getPlayerState() === YT.PlayerState.PLAYING) pausarYo();
       else reproductor.playVideo();
     }
 
@@ -2456,6 +2460,25 @@
     silencio.loop = true;
 
     // Crea 1 segundo de silencio como archivo de audio WAV, sin descargar nada
+    // ▶️ SEGUIR SONANDO CUANDO OTRA APP TERMINA (nota de voz, vídeo de Facebook…)
+    // quiereSonar = tú quieres música (no le diste a pausa).
+    // pausaAjena  = la música se paró, pero NO fuiste tú: fue otra app que quiso sonar.
+    let quiereSonar = false, pausaAjena = false;
+    function pausarYo() { quiereSonar = false; pausaAjena = false; reproductor?.pauseVideo(); silencio.pause(); }
+    function seguirSiOtraAppParo() {
+      if (!pausaAjena || !quiereSonar || !reproductor) return;
+      if (reproductor.getPlayerState?.() === YT.PlayerState.PLAYING) { pausaAjena = false; return; }
+      pausaAjena = false;
+      reproductor.playVideo();
+      avisar("Seguimos con tu música");
+    }
+    // 1) Cuando la otra app suelta el sonido, el móvil vuelve a darle "play" a nuestro audio
+    //    de silencio. Ese es el aviso de que ya podemos seguir.
+    silencio.addEventListener("play", () => setTimeout(seguirSiOtraAppParo, 300));
+    // 2) Si el móvil no nos avisa, seguimos en cuanto vuelves a la app.
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(seguirSiOtraAppParo, 500); });
+    window.addEventListener("focus", () => setTimeout(seguirSiOtraAppParo, 500));
+
     function crearSilencio() {
       const muestras = 8000, datos = new DataView(new ArrayBuffer(44 + muestras * 2));
       const texto = (pos, t) => [...t].forEach((l, i) => datos.setUint8(pos + i, l.charCodeAt(0)));
@@ -2476,7 +2499,7 @@
     if ("mediaSession" in navigator) {
       const accion = (nombre, hacer) => { try { navigator.mediaSession.setActionHandler(nombre, hacer); } catch {} };
       accion("play", () => reproductor?.playVideo());
-      accion("pause", () => reproductor?.pauseVideo());
+      accion("pause", () => pausarYo());
       accion("nexttrack", () => siguiente());
       accion("previoustrack", () => anterior());
     }
@@ -2595,7 +2618,7 @@
     $("opGuardar").onclick = () => desdeOpciones(() => abrirHoja(cola[posicion]));
     $("opCola").onclick = () => desdeOpciones(abrirCola);
     $("opVideo").onclick = () => desdeOpciones(cambiarModoVideo);
-    $("opYouTube").onclick = () => desdeOpciones(() => { reproductor?.pauseVideo(); window.open("https://www.youtube.com/watch?v=" + cola[posicion].id); });
+    $("opYouTube").onclick = () => desdeOpciones(() => { pausarYo(); window.open("https://www.youtube.com/watch?v=" + cola[posicion].id); });
     $("btnCola").onclick = abrirCola;
     function abrirCola() {
       $("desdeCola").textContent = "A continuación: " + nombreCola;

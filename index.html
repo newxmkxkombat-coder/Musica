@@ -309,7 +309,9 @@
       position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; isolation: isolate;
       padding: calc(12px + env(safe-area-inset-top, 0px)) 24px calc(20px + env(safe-area-inset-bottom, 0px));
       background: #121212;
-      transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1); overflow-y: auto;
+      transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1);
+      /* Que NADA se corra al deslizar el dedo: no se mueve ni hacia abajo ni hacia los lados */
+      overflow: hidden; overflow: clip; overscroll-behavior: none; touch-action: none;
     }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
@@ -895,7 +897,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "26 · 31 oct";
+    const VERSION = "27 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";

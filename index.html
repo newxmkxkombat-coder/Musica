@@ -967,7 +967,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "31 · 31 oct";
+    const VERSION = "32 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1306,7 +1306,10 @@
                 // Si tocaste una canción antes de que estuviera listo, ahora sí suena
                 if (cola[posicion] && !cargado[activo]) tocar(posicion);
                 [0, 1, 2].filter(k => k !== n).forEach(crearJugador);   // ahora los de reserva
-              } else precargarVecinas();
+              } else {
+                precargarVecinas();
+                if (todosListos() && posicion < 0) precargarAlAbrir();
+              }
             },
             onStateChange: (e) => alCambiarEstado(n, e.data)
           }
@@ -1354,6 +1357,22 @@
         cargado[libre] = id;
         jugadores[libre].mute();
         jugadores[libre].loadVideoById(id);
+      });
+    }
+
+    // Al abrir la app dejamos listas (en silencio) las canciones que más seguro vas a poner:
+    // la última que escuchaste y la primera de Favoritos. Si tocas una, suena al instante.
+    let yaPrecargadoAlAbrir = false;
+    function precargarAlAbrir() {
+      if (yaPrecargadoAlAbrir) return;
+      yaPrecargadoAlAbrir = true;
+      const fav = carpetas.find(k => k.id === "fav")?.canciones[0];
+      const ids = [...new Set([historial[0]?.id, fav?.id].filter(Boolean))];
+      const reservas = [0, 1, 2].filter(n => n !== activo);   // un reproductor de reserva para cada una
+      ids.forEach((id, k) => {
+        cargado[reservas[k]] = id;
+        jugadores[reservas[k]].mute();
+        jugadores[reservas[k]].loadVideoById(id);
       });
     }
 

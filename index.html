@@ -107,6 +107,7 @@
     h2 { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 16px; text-wrap: balance; }
     h2:empty { display: none; }
     .aviso { color: var(--gris); padding: 20px 0; line-height: 1.6; }
+    .version { font-size: 12px; text-align: center; color: var(--gris2); }
 
     /* ----- Inicio ----- */
     .saludo { font-size: 24px; font-weight: 800; letter-spacing: -.4px; margin-bottom: 16px; }
@@ -736,6 +737,9 @@
       return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
     }
 
+    // Número de versión: sale al final del Inicio para saber si tienes la última
+    const VERSION = "15 · 31 oct";
+
     function mostrarInicio() {
       $("tituloLista").textContent = "";
       const lista = $("lista");
@@ -763,13 +767,17 @@
         })));
       }
 
+      const pie = document.createElement("p");
+      pie.className = "aviso version";
+      pie.textContent = "Mi Música · versión " + VERSION;
+      setTimeout(() => $("lista").appendChild(pie), 0);   // siempre al final
       // Recomendaciones (de Apple Music, gratis). Mientras cargan, cajitas "fantasma".
       if (recomendaciones) recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
       else {
         const cargando = seccion("Recomendado para ti", Array(6).fill(null));
         cargarRecomendaciones().then(() => {
           cargando.remove();
-          if (vistaActual === "inicio") recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
+          if (vistaActual === "inicio") { recomendaciones.forEach(s => seccion(s.titulo, s.canciones)); $("lista").appendChild(pie); }
         });
       }
     }

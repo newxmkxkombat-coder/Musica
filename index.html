@@ -645,9 +645,7 @@
        Cuando abres la pantalla grande se coloca en su hueco; si no, espera escondido -->
   <div id="video">
     <!-- Tres reproductores: uno suena, otro guarda la anterior y otro carga la siguiente -->
-    <div id="reproductorYT0"></div>
-    <div id="reproductorYT1"></div>
-    <div id="reproductorYT2"></div>
+    <!-- (los reproductores se crean desde el código: ver TOTAL_REPRODUCTORES) -->
     <img id="portada" alt="">
   </div>
 
@@ -756,7 +754,23 @@
     let posicion = -1;                       // cuál de la cola está sonando
     let reproductor = null;                  // el reproductor que está sonando ahora
     let jugadores = [];                      // los tres reproductores de YouTube
-    let cargado = [null, null, null];        // qué canción tiene cargada cada uno
+    // Cuántos reproductores de YouTube tenemos: 1 suena y los demás guardan canciones listas.
+    // Más = más canciones instantáneas, pero gasta más memoria del móvil.
+    // La app MIRA tu móvil y decide sola:
+    //   - navigator.deviceMemory = cuánta memoria RAM tiene (en GB, aproximado)
+    //   - navigator.hardwareConcurrency = cuántos "cerebritos" (núcleos) tiene el procesador
+    //   - saveData = si tienes activado el "ahorro de datos"
+    function cuantosReproductores() {
+      const ram = navigator.deviceMemory || 4;
+      const nucleos = navigator.hardwareConcurrency || 4;
+      const ahorro = navigator.connection?.saveData;
+      if (ahorro || ram <= 2 || nucleos <= 2) return 3;   // móvil sencillo: anterior, actual y siguiente
+      if (ram <= 4 || nucleos <= 4) return 5;
+      return 7;                                           // móvil potente: 6 canciones listas
+    }
+    const TOTAL_REPRODUCTORES = cuantosReproductores();
+    const NUMEROS = [...Array(TOTAL_REPRODUCTORES).keys()];   // [0, 1, 2, 3, 4, 5]
+    let cargado = NUMEROS.map(() => null);   // qué canción tiene cargada cada uno
     let activo = 0;                          // cuál de los tres suena (0, 1 o 2)
     let volumen = 80;
 
@@ -1052,7 +1066,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "38 · 31 oct";
+    const VERSION = "39 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1089,7 +1103,7 @@
 
       const pie = document.createElement("p");
       pie.className = "aviso version";
-      pie.textContent = "Mi Música · versión " + VERSION;
+      pie.textContent = "Mi Música · versión " + VERSION + " · " + (TOTAL_REPRODUCTORES - 1) + " canciones listas";
       setTimeout(() => $("lista").appendChild(pie), 0);   // siempre al final
       // Recomendaciones (de Apple Music, gratis). Mientras cargan, cajitas "fantasma".
       if (recomendaciones) recomendaciones.forEach(s => seccion(s.titulo, s.canciones));
@@ -1380,6 +1394,12 @@
     function onYouTubeIframeAPIReady() {
       // Primero creamos SOLO el reproductor principal, para que no compita con los otros dos.
       // Cuando ya está listo, creamos los dos de reserva.
+      // Creamos las "cajitas" donde vivirá cada reproductor
+      NUMEROS.forEach(n => {
+        const caja = document.createElement("div");
+        caja.id = "reproductorYT" + n;
+        $("portada").before(caja);
+      });
       crearJugador(activo);
       reproductor = jugadores[activo];
     }
@@ -1395,7 +1415,8 @@
               if (n === activo) {
                 // Si tocaste una canción antes de que estuviera listo, ahora sí suena
                 if (cola[posicion] && !cargado[activo]) tocar(posicion);
-                [0, 1, 2].filter(k => k !== n).forEach(crearJugador);   // ahora los de reserva
+                // Ahora los de reserva, de uno en uno (así no se pelean por el internet)
+                NUMEROS.filter(k => k !== n).forEach((k, orden) => setTimeout(() => crearJugador(k), 250 * orden));
               } else {
                 precargarVecinas();
                 if (todosListos() && posicion < 0) precargarAlAbrir();
@@ -1407,7 +1428,7 @@
           }
         });
     }
-    const todosListos = () => jugadores.length === 3 && jugadores.every(j => j?.loadVideoById);
+    const todosListos = () => NUMEROS.every(n => jugadores[n]?.loadVideoById);
 
     function alCambiarEstado(n, estado) {
       const E = YT.PlayerState;
@@ -1441,17 +1462,31 @@
       });
     }
 
-    // Deja la anterior y la siguiente cargadas en los reproductores de reserva
+    // Deja cargadas en los reproductores de reserva las canciones que más seguro pondrás:
+    // las 3 siguientes, las 2 anteriores y la primera de la lista (por si vuelves al principio).
+    let esperasPrecarga = [];
+    function cancionesQueQueremos() {
+      return [...new Set([
+        cola[posicion + 1], cola[posicion - 1], cola[posicion + 2], cola[posicion + 3], cola[0], cola[posicion - 2],
+      ].map(c => c?.id).filter(id => id && id !== cola[posicion]?.id))].slice(0, TOTAL_REPRODUCTORES - 1);
+    }
     function precargarVecinas() {
       if (!todosListos()) return;
-      const queremos = [cola[posicion + 1]?.id, cola[posicion - 1]?.id].filter(Boolean);
+      const queremos = cancionesQueQueremos();
+      esperasPrecarga.forEach(clearTimeout);
+      esperasPrecarga = [];
+      let orden = 0;
       queremos.forEach(id => {
         if (cargado.some((x, n) => x === id && n !== activo)) return;   // ya está cargada
-        const libre = [0, 1, 2].find(n => n !== activo && !queremos.includes(cargado[n]));
+        const libre = NUMEROS.find(n => n !== activo && !queremos.includes(cargado[n]));
         if (libre === undefined) return;
         cargado[libre] = id;
-        jugadores[libre].mute();
-        jugadores[libre].loadVideoById(id);
+        // De una en una, con un respiro entre cada una, para no quitarle internet a la que suena
+        esperasPrecarga.push(setTimeout(() => {
+          if (cargado[libre] !== id || libre === activo) return;   // mientras tanto cambió algo
+          jugadores[libre].mute();
+          jugadores[libre].loadVideoById(id);
+        }, 700 * orden++));
       });
     }
 
@@ -1463,7 +1498,7 @@
       yaPrecargadoAlAbrir = true;
       const fav = carpetas.find(k => k.id === "fav")?.canciones[0];
       const ids = [...new Set([historial[0]?.id, fav?.id].filter(Boolean))];
-      const reservas = [0, 1, 2].filter(n => n !== activo);   // un reproductor de reserva para cada una
+      const reservas = NUMEROS.filter(n => n !== activo);   // un reproductor de reserva para cada una
       ids.forEach((id, k) => {
         cargado[reservas[k]] = id;
         jugadores[reservas[k]].mute();
@@ -1474,7 +1509,9 @@
     // Carga una canción en un reproductor libre, en silencio, por si la eligen
     function precargar(id) {
       if (!id || !todosListos() || cargado.includes(id)) return;
-      const libre = [0, 1, 2].find(n => n !== activo && cargado[n] !== cola[posicion + 1]?.id && cargado[n] !== cola[posicion - 1]?.id);
+      const importantes = cancionesQueQueremos().slice(0, 3);   // estas no las pisamos
+      const libre = NUMEROS.find(n => n !== activo && !cargado[n]) ??
+                    NUMEROS.find(n => n !== activo && !importantes.includes(cargado[n]));
       if (libre === undefined) return;
       cargado[libre] = id;
       jugadores[libre].mute();

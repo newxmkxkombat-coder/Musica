@@ -1096,7 +1096,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "41 · 31 oct";
+    const VERSION = "42 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1575,7 +1575,7 @@
                 // Si tocaste una canción antes de que estuviera listo, ahora sí suena
                 if (cola[posicion] && !cargado[activo]) tocar(posicion);
                 // Ahora los de reserva, de uno en uno (así no se pelean por el internet)
-                NUMEROS.filter(k => k !== n).forEach((k, orden) => setTimeout(() => crearJugador(k), 250 * orden));
+                NUMEROS.filter(k => k !== n).forEach((k, orden) => setTimeout(() => crearJugador(k), 1000 + 500 * orden));
               } else {
                 precargarVecinas();
                 if (todosListos() && posicion < 0) precargarAlAbrir();
@@ -1629,6 +1629,21 @@
         cola[posicion + 1], cola[posicion - 1], cola[posicion + 2], cola[posicion + 3], cola[0], cola[posicion - 2],
       ].map(c => c?.id).filter(id => id && id !== cola[posicion]?.id))].slice(0, TOTAL_REPRODUCTORES - 1);
     }
+    // Cuando pides una canción que NO estaba lista, paramos las que se estaban cargando
+    // de fondo para que no le quiten internet. Las ya cargadas se quedan como están.
+    // Cuando la tuya ya suena, precargarVecinas() vuelve a cargar lo que falte.
+    function pausarPrecargas() {
+      esperasPrecarga.forEach(clearTimeout);
+      esperasPrecarga = [];
+      NUMEROS.forEach(n => {
+        if (n === activo || !cargado[n] || !jugadores[n]?.getPlayerState) return;
+        const estado = jugadores[n].getPlayerState();
+        if (estado === -1 || estado === YT.PlayerState.BUFFERING) {   // todavía cargando
+          jugadores[n].stopVideo();
+          cargado[n] = null;
+        }
+      });
+    }
     function precargarVecinas() {
       if (!todosListos()) return;
       const queremos = cancionesQueQueremos();
@@ -1645,7 +1660,7 @@
           if (cargado[libre] !== id || libre === activo) return;   // mientras tanto cambió algo
           jugadores[libre].mute();
           jugadores[libre].loadVideoById(id);
-        }, 700 * orden++));
+        }, 1500 + 1000 * orden++));   // la primera espera 1,5 s: que la que suena coja ventaja
       });
     }
 
@@ -1726,6 +1741,7 @@
               este.loadVideoById(c.id);
           }, 2500);
         } else {
+          pausarPrecargas();   // ¡prioridad total a la canción que pediste!
           cargado[activo] = c.id;
           reproductor.unMute(); reproductor.setVolume(volumen);
           reproductor.loadVideoById(c.id);

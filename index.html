@@ -436,7 +436,8 @@
     /* Avisito que sale abajo un momento ("Se reproducirá a continuación") */
     #avisito { position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 50;
       background: #fff; color: #000; font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 24px #0008; white-space: nowrap; margin: 0; }
-    .creditoLetra { font-size: 11px; color: #ffffff99; margin-top: 10px; }
+    .creditoLetra { font-size: 11px; color: #ffffff99; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .letraMala { background: none; border: none; color: #ffffffcc; font: inherit; font-weight: 700; text-decoration: underline; padding: 6px 0; cursor: pointer; }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
     #pantalla.arrastrando, #video.arrastrando { transition: none; }
@@ -763,7 +764,8 @@
       <h3>Vista previa de la letra</h3>
       <div class="lineas" id="lineas"></div>
       <button class="boton" id="btnLetraCompleta">Mostrar letra</button>
-      <div class="creditoLetra" id="creditoLetra">Letras de LRCLIB</div>
+      <div class="creditoLetra"><span id="creditoLetra">Letras de LRCLIB</span>
+        <button class="letraMala" id="btnLetraMala">¿No es esta la letra?</button></div>
     </div>
     </div>
   </section>
@@ -1310,7 +1312,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "58 · 31 oct";
+    const VERSION = "59 · 31 oct";
 
     // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
     function colorDeLaHora() {
@@ -2777,13 +2779,21 @@
     //   1) LRCLIB: letras CON tiempos (se van pintando mientras suena). La mejor.
     //   2) Lyrics.ovh: solo el texto, pero tiene muchas que LRCLIB no tiene.
     // Y si el título de YouTube es raro, le preguntamos a Deezer el nombre EXACTO.
+    // ¿Se parecen dos nombres? ("El Aldeano" y "AL2 El Aldeano" → sí)
+    function seParecen(a, b) {
+      const x = normalizar(a), y = normalizar(b);
+      return x.length > 1 && y.length > 1 && (x.includes(y) || y.includes(x));
+    }
+    let artistasValidos = [];   // los nombres que aceptamos como "el artista de esta canción"
+    const esDelArtista = (nombre) => !artistasValidos.length || artistasValidos.some(a => seParecen(a, nombre || ""));
     async function lrclib(intentos, dura, exigirDuracion) {
       let sinTiempos = null;
       for (const intento of intentos) {
         try {
           const r = await fetch("https://lrclib.net/api/search?" + intento);
           if (!r.ok) continue;
-          let resultados = (await r.json()).filter(x => x.syncedLyrics || x.plainLyrics);
+          // Solo letras del MISMO artista (si no, salía la letra de otra canción con el mismo nombre)
+          let resultados = (await r.json()).filter(x => (x.syncedLyrics || x.plainLyrics) && esDelArtista(x.artistName) && !x.instrumental);
           // Si solo buscamos por nombre de canción, exigimos que dure casi lo mismo (para no traer otra)
           if (exigirDuracion(intento)) resultados = dura ? resultados.filter(x => Math.abs(x.duration - dura) < 6) : [];
           if (!resultados.length) continue;
@@ -2798,7 +2808,9 @@
     }
     async function nombreExacto(artista, cancion) {
       const t = (await deezer("search/track?q=" + encodeURIComponent(artista + " " + cancion) + "&limit=1"))?.data?.[0];
-      return t ? { artista: t.artist?.name || artista, cancion: t.title_short || t.title || cancion } : null;
+      // Deezer a veces devuelve OTRA canción: solo la aceptamos si el artista y el nombre se parecen
+      if (!t || !esDelArtista(t.artist?.name) || !seParecen(t.title_short || t.title, cancion)) return null;
+      return { artista: t.artist.name, cancion: t.title_short || t.title };
     }
     async function lyricsOvh(artista, cancion) {
       try {
@@ -2817,6 +2829,7 @@
       const apodo = (c.canal.match(/["“”«]([^"“”»]+)["“”»]/) || artista.match(/["“”«]([^"“”»]+)["“”»]/) || [])[1];
       const sinComillas = artista.replace(/["“”«»]/g, "").replace(/\s+/g, " ").trim();
       const otrosNombres = [...new Set([apodo, sinComillas].filter(n => n && normalizar(n) !== normalizar(artista)))];
+      artistasValidos = [artista, ...otrosNombres, limpiarArtista(c.canal)].filter(Boolean);
       // 1) LRCLIB con lo que sacamos del título de YouTube
       let encontrada = await lrclib([de(artista, cancion), ...otrosNombres.map(n => de(n, cancion)),
         `q=${encodeURIComponent(artista + " " + cancion)}`, soloNombre], dura, i => i === soloNombre);
@@ -2854,6 +2867,20 @@
       return lineas;
     }
 
+    // Las canciones donde nos dijiste "esta no es la letra": no la volvemos a mostrar
+    let letrasMalas = leer("letrasMalas", {});
+    $("btnLetraMala").onclick = (e) => {
+      e.stopPropagation();
+      const id = cola[posicion]?.id;
+      if (!id) return;
+      letrasMalas[id] = true;
+      guardar("letrasMalas", letrasMalas);
+      letra = [];
+      $("tarjetaLetra").hidden = true;
+      $("pantalla").classList.remove("conLetra");
+      $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";
+      avisar("Gracias. No volveremos a mostrar esa letra");
+    };
     async function cargarLetra(c) {
       $("tarjetaLetra").hidden = true;
       $("pantalla").classList.remove("conLetra");
@@ -2861,6 +2888,7 @@
       $("lineasGrandes").innerHTML = "<p>Buscando la letra…</p>";
       const id = c.id;
       try {
+        if (letrasMalas[id]) return $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";
         if (!memoriaLetras[id]) memoriaLetras[id] = await buscarLetra(c);
         if (cola[posicion]?.id !== id) return;   // ya cambiaste de canción
         if (memoriaLetras[id] === "nada") return $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";

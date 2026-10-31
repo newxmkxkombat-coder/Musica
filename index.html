@@ -330,6 +330,30 @@
     .lineas p.cantada, .lineas p.ahora { color: #fff; }
     .lineas.sinTiempos p { color: #fff; }   /* letra sin tiempos: toda en blanco */
     .tarjetaLetra .boton { margin-top: 14px; background: #fff; color: #000; }
+    /* ----- Letra a pantalla completa (al tocar "Mostrar letra") ----- */
+    #letraGrande { position: fixed; inset: 0; z-index: 35; background: var(--colorLetra, #4b3a33); display: flex; flex-direction: column;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 0 calc(20px + env(safe-area-inset-bottom, 0px)); animation: subir .25s ease; }
+    #letraGrande[hidden] { display: none; }
+    #letraGrande .cabeza { display: flex; align-items: center; padding: 0 16px; gap: 8px; }
+    #letraGrande .cabeza .iconoBoton { color: #fff; }
+    #letraGrande .cabeza .iconoBoton .ic { width: 28px; height: 28px; }
+    #letraGrande .cabeza div { flex: 1; min-width: 0; text-align: center; margin-right: 48px; }
+    #letraGrande .cabeza b, #letraGrande .cabeza span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #letraGrande .cabeza b { font-size: 15px; }
+    #letraGrande .cabeza span { font-size: 14px; color: #ffffffd9; }
+    #lineasGrandes { flex: 1; overflow-y: auto; padding: 30px 24px 40%; scrollbar-width: none; overscroll-behavior: contain;
+      /* las líneas se desvanecen abajo, como en Spotify */
+      mask-image: linear-gradient(180deg, #000 85%, transparent); -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent); }
+    #lineasGrandes p { font-size: 22px; font-weight: 800; line-height: 1.3; margin-bottom: 22px; color: #ffffffa6; cursor: pointer;
+      transition: color .3s, font-size .3s; }
+    #lineasGrandes p.ahora { color: #fff; font-size: 26px; margin: 34px 0; }
+    #lineasGrandes.sinTiempos p { color: #fff; cursor: default; }
+    #letraGrande .pie { padding: 8px 24px 0; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    #letraGrande .progreso { max-width: none; flex-wrap: wrap; justify-content: space-between; gap: 4px; color: #ffffffb3; }
+    #letraGrande .progreso input { flex: 1 0 100%; }
+    #letraGrande .progreso span { width: auto; }
+    #letraGrande .btnPlay { width: 64px; height: 64px; }
+    #letraGrande .btnPlay .ic { width: 28px; height: 28px; }
     .creditoLetra { font-size: 11px; color: #ffffff99; margin-top: 10px; }
     /* No la escondemos con display:none: así los reproductores de YouTube siguen funcionando */
     #pantalla.abierta { transform: none; }
@@ -606,6 +630,23 @@
     <div id="reproductorYT2"></div>
     <img id="portada" alt="">
   </div>
+
+  <!-- ===== LETRA A PANTALLA COMPLETA ===== -->
+  <section id="letraGrande" hidden>
+    <div class="cabeza">
+      <button class="iconoBoton" id="cerrarLetra" title="Cerrar letra"><svg class="ic"><use href="#i-abajo"/></svg></button>
+      <div><b class="nombreActual"></b><span class="artistaActual"></span></div>
+    </div>
+    <div id="lineasGrandes"></div>
+    <div class="pie">
+      <div class="progreso">
+        <input type="range" class="barraTiempo" min="0" max="1000" value="0">
+        <span class="tActual">0:00</span>
+        <span class="tTotal">0:00</span>
+      </div>
+      <button class="btnPlay" data-accion="play" title="Play / Pausa"></button>
+    </div>
+  </section>
 
   <!-- ===== HOJA DE OPCIONES (⋮) ===== -->
   <div class="fondoHoja" id="fondoOpciones" hidden>
@@ -926,7 +967,7 @@
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "30 · 31 oct";
+    const VERSION = "31 · 31 oct";
 
     function mostrarInicio() {
       $("tituloLista").textContent = "";
@@ -1486,6 +1527,7 @@
       if (estado.capa !== "hoja" && !$("fondoHoja").hidden) { $("fondoHoja").hidden = true; repintar(); }
       if (estado.capa !== "opciones") $("fondoOpciones").hidden = true;
       if (estado.capa !== "cola") $("fondoCola").hidden = true;
+      if (estado.capa !== "letra") $("letraGrande").hidden = true;
       if (estado.vista && estado.vista !== vistaActual) cambiarVista(estado.vista, true, true);
     });
 
@@ -1547,7 +1589,8 @@
     async function cargarLetra(c) {
       $("tarjetaLetra").hidden = true;
       $("pantalla").classList.remove("conLetra");
-      letra = [];
+      letra = []; lineaAnterior = -1;
+      $("lineasGrandes").innerHTML = "<p>Buscando la letra…</p>";
       const id = c.id;
       try {
         if (!memoriaLetras[id]) {
@@ -1558,7 +1601,8 @@
           const puntos = (x) => (x.syncedLyrics ? 2 : 0) + (dura && Math.abs(x.duration - dura) < 8 ? 1 : 0);
           memoriaLetras[id] = resultados.sort((a, b) => puntos(b) - puntos(a))[0] || "nada";
         }
-        if (cola[posicion]?.id !== id || memoriaLetras[id] === "nada") return;   // ya cambiaste de canción
+        if (cola[posicion]?.id !== id) return;   // ya cambiaste de canción
+        if (memoriaLetras[id] === "nada") return $("lineasGrandes").innerHTML = "<p>Esta canción no tiene letra disponible.</p>";
         pintarLetra(memoriaLetras[id]);
       } catch { /* sin internet o sin letra: simplemente no la mostramos */ }
     }
@@ -1577,6 +1621,16 @@
       caja.innerHTML = "";
       caja.classList.toggle("sinTiempos", !letraConTiempos);
       letra.forEach(l => { const p = document.createElement("p"); p.textContent = l.texto; caja.appendChild(p); });
+      // Las mismas líneas para la letra a pantalla completa. Tocar una línea salta a ese momento.
+      const grande = $("lineasGrandes");
+      grande.innerHTML = "";
+      grande.classList.toggle("sinTiempos", !letraConTiempos);
+      letra.forEach(l => {
+        const p = document.createElement("p");
+        p.textContent = l.texto;
+        if (letraConTiempos) p.onclick = () => { reproductor?.seekTo(l.t, true); seguirLetra(l.t, true); };
+        grande.appendChild(p);
+      });
       caja.scrollTop = 0;
       $("tarjetaLetra").classList.remove("completa");
       $("btnLetraCompleta").textContent = "Mostrar letra";
@@ -1586,21 +1640,40 @@
     }
 
     // Ilumina la frase que se está cantando y sube la letra para que se vea
-    function seguirLetra(segundo) {
+    let lineaAnterior = -1;
+    let tocandoLetra = 0;   // momento en que deslizaste la letra con el dedo
+    function seguirLetra(segundo, forzar = false) {
       if (!letraConTiempos || !letra.length || !$("pantalla").classList.contains("abierta")) return;
       let ahora = -1;
       letra.forEach((l, k) => { if (l.t <= segundo + 0.3) ahora = k; });
+      if (ahora === lineaAnterior && !forzar) return;   // nada nuevo
+      lineaAnterior = ahora;
+      // La tarjeta pequeña
       const filas = $("lineas").children;
       [...filas].forEach((p, k) => { p.classList.toggle("cantada", k < ahora); p.classList.toggle("ahora", k === ahora); });
-      if (ahora >= 0 && !$("tarjetaLetra").classList.contains("completa"))
-        $("lineas").scrollTo({ top: Math.max(0, filas[ahora].offsetTop - 70), behavior: "smooth" });
+      if (ahora >= 0) $("lineas").scrollTo({ top: Math.max(0, filas[ahora].offsetTop - 70), behavior: "smooth" });
+      // La letra grande: la frase de ahora queda a un tercio de la pantalla
+      const grandes = $("lineasGrandes").children;
+      [...grandes].forEach((p, k) => p.classList.toggle("ahora", k === ahora));
+      // Si acabas de mover la letra con el dedo, esperamos 3 segundos antes de moverla nosotros
+      if (ahora >= 0 && !$("letraGrande").hidden && Date.now() - tocandoLetra > 3000) {
+        const caja = $("lineasGrandes");
+        caja.scrollTo({ top: Math.max(0, grandes[ahora].offsetTop - caja.offsetTop - caja.clientHeight / 3), behavior: "smooth" });
+      }
     }
+    $("lineasGrandes").addEventListener("touchmove", () => tocandoLetra = Date.now(), { passive: true });
+    $("lineasGrandes").addEventListener("wheel", () => tocandoLetra = Date.now(), { passive: true });
 
+    // "Mostrar letra" abre la letra a pantalla completa; "atrás" la cierra
     $("btnLetraCompleta").onclick = () => {
-      const completa = $("tarjetaLetra").classList.toggle("completa");
-      $("btnLetraCompleta").textContent = completa ? "Mostrar menos" : "Mostrar letra";
-      if (!completa) $("tarjetaLetra").scrollIntoView({ block: "start", behavior: "smooth" });
+      $("letraGrande").hidden = false;
+      history.pushState({ vista: vistaActual, capa: "letra" }, "");
+      tocandoLetra = 0;
+      requestAnimationFrame(() => seguirLetra(reproductor?.getCurrentTime?.() || 0, true));
     };
+    $("cerrarLetra").onclick = () => history.back();
+    // Tocar las líneas de la tarjeta pequeña también la abre
+    $("lineas").onclick = () => $("btnLetraCompleta").click();
 
     // El color de la tarjeta sale de la portada (como hace Spotify)
     function colorDeLetra() {
@@ -1617,7 +1690,7 @@
           for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
           // Lo oscurecemos un poco para que las letras blancas se lean
           const n = d.length / 4, f = 0.75;
-          $("pantalla").style.setProperty("--colorLetra", `rgb(${r / n * f | 0}, ${g / n * f | 0}, ${b / n * f | 0})`);
+          document.documentElement.style.setProperty("--colorLetra", `rgb(${r / n * f | 0}, ${g / n * f | 0}, ${b / n * f | 0})`);
         } catch { /* si la imagen no deja leer sus colores, usamos el color de siempre */ }
       };
       img.src = $("portada").src;

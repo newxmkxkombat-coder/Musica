@@ -128,6 +128,16 @@
       background: #ffffff14; cursor: pointer; font-weight: 700; font-size: 13px; min-width: 0;
     }
     .tile:hover { background: #ffffff24; }
+    /* 🎭 Tarjetas de estado de ánimo (en Buscar) */
+    .animos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .tarjetaAnimo { position: relative; height: 96px; border-radius: 8px; padding: 12px; overflow: hidden; cursor: pointer;
+      font-size: 17px; font-weight: 800; color: #fff; border: none; text-align: left; font-family: inherit; }
+    .tarjetaAnimo b { position: relative; z-index: 1; text-shadow: 0 1px 6px #0006; }
+    .tarjetaAnimo span { position: absolute; right: -6px; bottom: -8px; font-size: 52px; transform: rotate(18deg); }
+    .tarjetaAnimo:active { transform: scale(.97); }
+    /* Búsquedas que quedan hoy: discreto, casi invisible */
+    .cuota { font-size: 11px; color: #ffffff38; text-align: right; margin: -18px 2px 14px; }
+    main.escribiendo .cuota { display: none; }
     .tile .tapa { width: 56px; height: 56px; aspect-ratio: auto; margin: 0; border-radius: 0; box-shadow: 4px 0 12px #0006; flex: none; }
     .tile .tapa .ic { width: 22px; height: 22px; }
     .tile span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
@@ -403,6 +413,13 @@
     #video iframe.dormido { opacity: 0; pointer-events: none; }
     #portada { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transform: scale(1.34); }
     #video.conVideo #portada { display: none; }
+    /* 🌊 Fondo en movimiento: la portada se acerca y se mueve muy despacito (como el Canvas de Spotify) */
+    @keyframes respirar {
+      0%   { transform: scale(1.34) translate(0, 0); }
+      50%  { transform: scale(1.46) translate(-2%, 1.5%); }
+      100% { transform: scale(1.38) translate(2%, -1.5%); }
+    }
+    #pantalla.abierta #fondoPortada, #video.enPantalla #portada { animation: respirar 24s ease-in-out infinite alternate; }
     /* Botón "Cambiar a vídeo" (pastilla negra, como Spotify) */
     #btnVideo {
       align-self: flex-start; display: inline-flex; align-items: center; gap: 10px;
@@ -601,6 +618,7 @@
         <button type="button" class="iconoBoton" id="borrarBusqueda" title="Borrar"><span><svg class="ic"><use href="#i-equis"/></svg></span></button>
       </div>
     </form>
+    <div class="cuota" id="cuota" hidden></div>
     <!-- Sugerencias mientras escribes: ocupan la pantalla, como en Spotify -->
     <div class="sugerencias" id="sugerencias"></div>
     <h2 id="tituloLista"></h2>
@@ -764,6 +782,11 @@
       if (!e.target.closest("input, textarea")) e.preventDefault();
     });
 
+    // 📳 Vibración suavecita al tocar botones y canciones (si el móvil lo permite)
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("button, .cancion, .tile, .sug, .carpeta, .tarjetaRec, #mini")) navigator.vibrate?.(8);
+    }, true);
+
     // Pequeñas ayudas
     function icono(nombre) { return `<svg class="ic"><use href="#i-${nombre}"/></svg>`; }
     const $ = (id) => document.getElementById(id);
@@ -862,6 +885,7 @@
       const url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
                   "&videoCategoryId=10&maxResults=20&q=" + encodeURIComponent(texto) + "&key=" + clave;
       const datos = await (await fetch(url)).json();
+      contarBusqueda();
       if (datos.error) throw new Error(datos.error.message);
       const lista = datos.items.map(v => ({
         id: v.id.videoId,
@@ -1137,15 +1161,40 @@
     // =====================================================================
     let recomendaciones = null;   // las guardamos para no pedirlas cada vez que entras
 
+    // ----- 🔢 Cuántas búsquedas te quedan hoy -----
+    // Google te regala 10.000 "puntos" al día y cada búsqueda gasta 100 = 100 búsquedas.
+    // El contador se reinicia a medianoche de California (hora de Google).
+    // OJO: solo contamos las de ESTE móvil (si alguien más usa tu llave, no lo sabemos).
+    const diaDeGoogle = () => new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles" });
+    function contarBusqueda() {
+      const c = leer("cuota", {});
+      const hoy = diaDeGoogle();
+      guardar("cuota", { dia: hoy, usadas: (c.dia === hoy ? c.usadas : 0) + 1 });
+      pintarCuota();
+    }
+    function pintarCuota() {
+      const c = leer("cuota", {});
+      const usadas = c.dia === diaDeGoogle() ? c.usadas : 0;
+      $("cuota").textContent = "≈ " + Math.max(0, 100 - usadas) + " búsquedas hoy";
+    }
+
     function saludo() {
       const h = new Date().getHours();
-      return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+      return h >= 5 && h < 12 ? "Buenos días" : h >= 12 && h < 19 ? "Buenas tardes" : "Buenas noches";
     }
 
     // Número de versión: sale al final del Inicio para saber si tienes la última
-    const VERSION = "44 · 31 oct";
+    const VERSION = "45 · 31 oct";
 
+    // 🌅 El color de arriba del Inicio cambia según la hora, igual que el saludo
+    function colorDeLaHora() {
+      const h = new Date().getHours();
+      if (h >= 5 && h < 12) return "rgb(150, 86, 34)";   // mañana: naranja de amanecer
+      if (h >= 12 && h < 19) return "rgb(28, 84, 132)";  // tarde: azul de cielo
+      return "rgb(62, 36, 118)";                          // noche: morado
+    }
     function mostrarInicio() {
+      ponerColorDeFondo(colorDeLaHora());
       $("tituloLista").textContent = "";
       const lista = $("lista");
       lista.innerHTML = `<div class="saludo">${saludo()}</div><div class="accesos" id="accesos"></div>`;
@@ -1575,6 +1624,8 @@
       const menu = vista.startsWith("carpeta:") ? "biblioteca" : vista;
       todos(".menu").forEach(b => b.classList.toggle("activo", b.dataset.vista === menu));
       $("formBuscar").hidden = vista !== "buscar";
+      $("cuota").hidden = vista !== "buscar" || !leer("claveYT", "");
+      if (vista === "buscar") pintarCuota();
       $("contenido").classList.remove("escribiendo");
       $("contenido").scrollTop = 0;
       if (!pintar) return;
@@ -1584,10 +1635,57 @@
       else {   // Buscar
         if (!leer("claveYT", "")) return mostrarBienvenida();
         if (ultimaLista.canciones.length) pintarLista(ultimaLista.titulo, ultimaLista.canciones);
-        else { $("tituloLista").textContent = ""; $("lista").innerHTML = '<p class="aviso">Escribe una canción, un artista o un trozo de la letra. 🎧</p>'; }
+        else mostrarAnimos();
       }
     }
-    todos(".menu").forEach(b => b.onclick = () => cambiarVista(b.dataset.vista));
+    todos(".menu").forEach(b => b.onclick = () => {
+      // Tocar "Buscar" estando ya en Buscar = volver a las tarjetas de ánimo (como Spotify)
+      if (b.dataset.vista === "buscar" && vistaActual === "buscar") { ultimaLista = { titulo: "", canciones: [] }; campo.value = ""; }
+      cambiarVista(b.dataset.vista);
+    });
+
+    // ----- 🎭 Explorar por estado de ánimo -----
+    // Cada tarjeta tiene artistas "semilla". Pedimos sus canciones a Apple Music (gratis),
+    // las mezclamos y suena una lista al momento. El vídeo de YouTube de cada canción
+    // se busca justo antes de que le toque sonar.
+    const ANIMOS = [
+      { nombre: "Fiesta", emoji: "🎉", color: "#e8115b", artistas: ["Bad Bunny", "Karol G", "Feid", "J Balvin", "Ozuna", "Rauw Alejandro"] },
+      { nombre: "Reggaetón viejo", emoji: "📼", color: "#8d67ab", artistas: ["Daddy Yankee", "Don Omar", "Wisin & Yandel", "Zion & Lennox", "Tito El Bambino", "Héctor El Father"] },
+      { nombre: "Romántica", emoji: "💘", color: "#dc148c", artistas: ["Romeo Santos", "Prince Royce", "Aventura", "Manuel Turizo", "Camilo", "Reik"] },
+      { nombre: "Gym", emoji: "💪", color: "#e13300", artistas: ["Anuel AA", "Myke Towers", "Arcángel", "Eladio Carrión", "Eminem", "Ñengo Flow"] },
+      { nombre: "Relax", emoji: "🌿", color: "#148a08", artistas: ["Morat", "Sebastián Yatra", "Jesse & Joy", "Kali Uchis", "Mon Laferte", "Bacilos"] },
+      { nombre: "Salsa", emoji: "💃", color: "#e91429", artistas: ["Marc Anthony", "Grupo Niche", "Joe Arroyo", "Héctor Lavoe", "Gilberto Santa Rosa", "Willie Colón"] },
+      { nombre: "Vallenato", emoji: "🪗", color: "#bc5900", artistas: ["Silvestre Dangond", "Carlos Vives", "Diomedes Díaz", "Peter Manjarrés", "Jorge Celedón", "Binomio de Oro"] },
+      { nombre: "Trap latino", emoji: "🔥", color: "#1e3264", artistas: ["Bad Bunny", "Anuel AA", "Bryant Myers", "Eladio Carrión", "Jhayco", "Quevedo"] },
+    ];
+    function mostrarAnimos() {
+      $("tituloLista").textContent = "Explorar todo";
+      const lista = $("lista");
+      lista.innerHTML = '<div class="animos"></div>';
+      ANIMOS.forEach(a => {
+        const t = document.createElement("button");
+        t.className = "tarjetaAnimo";
+        t.style.background = a.color;
+        t.innerHTML = `<b>${a.nombre}</b><span>${a.emoji}</span>`;
+        t.onclick = () => tocarAnimo(a);
+        lista.firstChild.appendChild(t);
+      });
+    }
+    async function tocarAnimo(a) {
+      $("tituloLista").textContent = a.nombre + " " + a.emoji;
+      $("lista").innerHTML = '<p class="aviso">Armando tu lista…</p>';
+      const todas = await Promise.all(a.artistas.map(nombre => itunes(nombre, 8)));
+      const vistas = new Set();
+      const canciones = todas.flat()
+        .filter(c => a.artistas.some(n => normalizar(c.artista).includes(normalizar(n))))   // que sea de esos artistas
+        .filter(c => { const n = normalizar(c.titulo.replace(/\(.*?\)/g, "")); if (vistas.has(n)) return false; vistas.add(n); return true; })
+        .sort(() => Math.random() - 0.5).slice(0, 30)
+        .map(c => ({ titulo: c.titulo, canal: c.artista, img: c.img, id: null }));
+      if (!canciones.length) return $("lista").innerHTML = '<p class="aviso">No se pudo armar la lista. Revisa tu internet.</p>';
+      ultimaLista = { titulo: a.nombre + " " + a.emoji, canciones };
+      pintarLista(ultimaLista.titulo, canciones);
+      reproducirLista(canciones, 0, a.nombre);
+    }
 
     // =====================================================================
     // 7) EL REPRODUCTOR (YouTube IFrame API) con PRECARGA
@@ -1692,6 +1790,12 @@
       });
     }
     function precargarVecinas() {
+      // Si la SIGUIENTE aún no tiene vídeo (radio, ánimos...), lo buscamos ya para tenerla lista
+      const sig = cola[posicion + 1];
+      if (sig && !sig.id && !sig.buscando) {
+        sig.buscando = true;
+        conVideo(sig).then(() => precargarVecinas()).catch(() => {}).finally(() => delete sig.buscando);
+      }
       if (!todosListos()) return;
       const queremos = cancionesQueQueremos();
       esperasPrecarga.forEach(clearTimeout);
